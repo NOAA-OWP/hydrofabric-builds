@@ -22,6 +22,7 @@ def build_osm_wb_elevs(
     min_area_sqkm: float,
     work_crs: str = "EPSG:5070",
     elev_calc: bool = True,
+    res_keep: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Python equivalent of the OSM waterbody chunk:
@@ -38,11 +39,14 @@ def build_osm_wb_elevs(
     :param max_waterbody_nearest_dist_m: maximum distance between points and waterbodies
     :param min_area_sqkm: minimum waterbody area to be considered
     :param elev_calc: flag to whether calculate elevation
+    :param res_keep: list of reference reservoir `dam_id`s to keep
     :return: modified osm dams file `osm_wb_elevs.gpkg`
     """
     res = gpd.read_file(ref_reservoirs_path)
+    res_keep = res_keep if res_keep is not None else []
     da = res[
         (res["distance_to_fp_m"] < max_waterbody_nearest_dist_m) & (res["wb_areasqkm"] >= min_area_sqkm)
+        | (res["dam_id"].isin(res_keep))
     ].copy()
 
     # ids = da["osm_ww_poly"].dropna().unique().tolist()  # R code has this line but does not match with osm dam

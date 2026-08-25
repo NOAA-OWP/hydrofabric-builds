@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
 import rasterio
 import rioxarray
@@ -159,3 +160,45 @@ def regrid_percent(
     finally:
         if temp_path.exists():
             temp_path.unlink()
+
+
+def domain_mask(
+    mask_path: Path,
+    hf_path: Path,
+    output_path: Path,
+    hf_layer: str | None = "divides",
+    mask_layer: str | None = "divides",
+    output_layer: str | None = "divides",
+    buffer_m: int | float = 5000,
+) -> None:
+    """Masks a divides domain if requested and saves.
+
+    The purpose is that the Alaska NHF is the full state but the NWM v4 domain is only the southern portion.
+    Running divide attributes on the whole state when only a small portion is needed is computationally intensive.
+    The mask path is generally the divides layer of the NWM v4 AK (AK nextgen from 2.2)
+
+    Parameters
+    ----------
+    mask_path : Path
+        path to mask file
+    hf_path : Path
+        path to built hydrofabric
+    output_path : Path
+        path to output masked HF to
+    hf_layer : str | None, optional
+        HF layer that will be masked. Directly input None if null, by default "divides"
+    mask_layer : str | None, optional
+        Mask file's layer to use for mask. Directly input None if null, by default "divides"
+    buffer_m : int | float, optional
+        Buffer size (meters) for the mask to insure data is not lost when masking a different hydrofabric, by default 5000 meters
+    """
+    gdf_mask = gpd.read_file(mask_path, layer=mask_layer) if mask_layer else gpd.read_file(mask_path)
+    gdf_mask = gdf_mask.dissolve()
+    gdf_mask["geometry"] = gdf_mask.buffer(buffer_m)
+
+    gdf_hf = gpd.read_file(hf_path, layer=hf_layer) if mask_layer else gpd.read_file(hf_path)
+    gdf_hf = gdf_hf.clip(gdf_mask["geometry"])
+    gdf_hf.to_file(output_path, layer=output_layer, driver="GPKG") if output_layer else gdf_hf.to_file(
+        output_path, driver="GPKG"
+    )
+    del gdf_mask, gdf_hf

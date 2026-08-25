@@ -16,6 +16,7 @@ def sample_hydrofabric_outlet1() -> dict[str, (gpd.GeoDataFrame | pd.DataFrame)]
         "flowpaths": gpd.GeoDataFrame(
             {
                 "fp_id": [1, 2],
+                "fp_to_id": [2, None],
                 "dn_nex_id": [1, 2],
                 "up_nex_id": [None, 1],
                 "div_id": [1, 2],
@@ -63,6 +64,7 @@ def sample_hydrofabric_outlet2() -> dict[str, (gpd.GeoDataFrame | pd.DataFrame)]
         "flowpaths": gpd.GeoDataFrame(
             {
                 "fp_id": [3, 4, 5],
+                "fp_to_id": [5, None, None],
                 "dn_nex_id": [3, 4, 5],
                 "up_nex_id": [None, None, 3],
                 "div_id": [3, 4, 5],
@@ -226,6 +228,7 @@ class TestCombineHydrofabricsPure:
 
         # Check flowpaths columns
         assert "fp_id" in result["flowpaths"].columns
+        assert "fp_to_id" in result["flowpaths"].columns
         assert "dn_nex_id" in result["flowpaths"].columns
         assert "up_nex_id" in result["flowpaths"].columns
         assert "div_id" in result["flowpaths"].columns
@@ -290,6 +293,7 @@ class TestCombineHydrofabricsPure:
                     {
                         "fp_id": [i * 10 + j for j in range(5)],
                         "dn_nex_id": [i * 10 + j for j in range(5)],
+                        "up_nex_id": [None] * 5,
                         "div_id": [i * 10 + j for j in range(5)],
                         "geometry": [LineString([(j, j), (j + 1, j + 1)]) for j in range(5)],
                     },
@@ -309,7 +313,7 @@ class TestCombineHydrofabricsPure:
                     {
                         "nex_id": [i * 10 + j for j in range(5)],
                         "dn_fp_id": [None] * 5,
-                        "geometry": [Point(j, j) for j in range(5)],
+                        "geometry": [Point(i * 10 + j, i * 10 + j) for j in range(5)],
                     },
                     crs=crs,
                 ),

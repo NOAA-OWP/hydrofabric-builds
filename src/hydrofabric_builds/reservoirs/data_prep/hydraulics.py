@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
+
+from hydrofabric_builds.schemas.hydrofabric import NWMDefaultHydraulics
 
 
 def _zero_to_nan(s: pd.Series | None) -> pd.Series | None:
@@ -165,6 +169,7 @@ def populate_hydraulics(
         _num(df.get("osm_area_sqkm")) * 1e6,
         _num(df.get("surface_area")),
     )
+    LkArea = np.where(LkArea == 0, np.nan, LkArea)
 
     # ---- Storage → mean depth (m) ----
     # 1233.48184    : acre-feet to m3 conversion factor
@@ -386,3 +391,21 @@ def populate_hydraulics(
     )
 
     return out
+
+
+def populate_nwm_hydaulics(gdf_path: Path) -> gpd.GeoDataFrame:
+    """Populate hydaulics for NWM lakes"""
+    gdf = gpd.read_file(gdf_path)
+
+    gdf["WeirC"] = gdf["WeirC"].fillna(NWMDefaultHydraulics.WeirC.value)
+    gdf["WeirL"] = gdf["WeirL"].fillna(NWMDefaultHydraulics.WeirL.value)
+
+    gdf["OrificeC"] = gdf["OrificeC"].fillna(NWMDefaultHydraulics.OrificeC.value)
+    gdf["OrificeA"] = gdf["OrificeA"].fillna(NWMDefaultHydraulics.OrificeA.value)
+
+    gdf["Dam_Length"] = gdf["Dam_Length"].fillna(NWMDefaultHydraulics.WeirL.value)
+    gdf["ifd"] = gdf["ifd"].fillna(NWMDefaultHydraulics.ifd.value)
+
+    gdf["LkArea"] = np.where(gdf["LkArea"].isna(), gdf["Shape_Area"] / (1000 * 1000), gdf["LkArea"])
+
+    return gdf

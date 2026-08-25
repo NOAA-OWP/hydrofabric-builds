@@ -10,6 +10,7 @@ from hydrofabric_builds.hydrofabric.aggregate import _aggregate_geometries
 from hydrofabric_builds.hydrofabric.build import _build_hydrofabric
 from hydrofabric_builds.hydrofabric.trace import _trace_stack
 from hydrofabric_builds.hydrofabric.utils import (
+    _check_network_cycles,
     _combine_hydrofabrics,
 )
 from hydrofabric_builds.schemas.hydrofabric import Aggregations, Classifications
@@ -271,4 +272,13 @@ def reduce_combine_base_hydrofabric(**context: dict[str, Any]) -> dict[str, Any]
     if not built_hydrofabrics:
         raise ValueError("No built hydrofabrics found from build phase")
 
-    return _combine_hydrofabrics(built_hydrofabrics, cfg.crs)
+    result = _combine_hydrofabrics(built_hydrofabrics, cfg.crs)
+
+    _check_network_cycles(
+        fp_gdf=result["flowpaths"],
+        nex_gdf=result["nexus"],
+        vfp_gdf=result.get("virtual_flowpaths"),
+        vnex_gdf=result.get("virtual_nexus"),
+    )
+
+    return result

@@ -37,7 +37,7 @@ def _validate_and_fix_geometries(gdf: gpd.GeoDataFrame, geom_type: str) -> gpd.G
         return gdf  # No invalid geometries
 
     geometries = gdf[invalid_mask].geometry
-    gdf.loc[invalid_mask, "geometry"] = geometries.make_valid()
+    gdf.loc[invalid_mask, "geometry"] = geometries.make_valid(method="structure")
 
     if len(gdf[~gdf.geometry.is_valid]) > 0:
         raise ValueError(f"Could not fix invalid geometries in {geom_type}")

@@ -6,7 +6,7 @@ This issue is mainly about capturing and solidifying the current workflow so we 
 
 ## Running in Hydrofabric Pipeline
 
-To run in pipeline, you must either retrieve a pre-computed RFC-DA geopackage from s3 or create one within the pipeline. The default location is `data/reservoirs/output/rfc-da-hydraulics-v1.gpkg`. If the file exists, the reservoir task will generate the reservoirs table. If the file does not exist, follow the following steps to set up data sources to create the input RFC-DA table. The defaults for all parameters are shown in `example_config.yaml` > `waterbodies`.
+To run in pipeline, you must either retrieve a pre-computed RFC-DA geopackage from s3 or create one within the pipeline. The default location is `data/reservoirs/output/rfc-da-hydraulics-v{#}.gpkg`. If the file exists, the reservoir task will generate the reservoirs table. If the file does not exist, follow the following steps to set up data sources to create the input RFC-DA table. The defaults for all parameters are shown in `example_config.yaml` > `waterbodies`.
 
 ### Setting up RFC-DA
 
@@ -18,7 +18,7 @@ aws s3 sync s3://hydrofabric-data/reservoirs/reference_reservoirs data/reservoir
 mkdir data/reservoirs/output
 ```
 
-Now, if `data/reservoirs/output/rfc-da-hydraulics-v1.gpkg` does not exist, the RFC-DA pipeline will run using these datasets.
+Now, if `data/reservoirs/output/rfc-da-hydraulics-v{#}.gpkg` does not exist, the RFC-DA pipeline will run using these datasets.
 
 
 ## Data Sources
@@ -59,6 +59,12 @@ which has been collected from the original state-based dataset that can be downl
 
 - Reads all state .gpkg files, extracts the lines layer, filters waterway == 'dam'.
 - Binds them into a single dataset and writes data/osm_dams_all.gpkg.
+
+
+### 5. NWM/HF 2.2 Lakes:
+Lakes from HF 2.2/NWM are included. To avoid duplicates, lakes and reference reservoirs are matched with spatial join to buffered reference waterbodies. For shared COMID, the most downstream (minimum hydrosequence) reference reserovir is kept. The HF 2.2 lake is removed. If there is no reference reservoir match, the HF 2.2 lake is kept. The data went through manual QA to create a list of edge cases that were not correctly classified by the algorithm. This generally happened with crescent or long lakes where the HF 2.2 lake point was the "centroid" and did not intersect the waterbody at all.
+
+Note that not all RFCDA reservoirs are included in NHF waterbodies. If a reservoir is not linked to a reference flowpath, it cannot be mapped to the NHF flowpaths.
 
 
 #### Future Action Items

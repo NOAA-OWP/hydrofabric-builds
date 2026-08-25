@@ -45,7 +45,7 @@ def build_waterbodies(**context: dict[str, Any]) -> dict[str, Any]:
             )
             logger.info("NWM lakes prepared")
 
-        rfc_da_pipeline(cfg.waterbodies)
+        rfc_da_pipeline(cfg.waterbodies, cfg.build)
 
         assert rfcda_file.exists(), "RFC-DA pipeline was run, but output file not found"
 

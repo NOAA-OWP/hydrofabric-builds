@@ -28,6 +28,7 @@ def fp_crosswalk_pipeline(cfg: HFConfig) -> pd.DataFrame:
     )
 
     out_path = Path(fp_cfg.outputs.path)
+    out_path.parent.mkdir(exist_ok=True, parents=True)
     crosswalk.to_parquet(out_path, index=False)
     logger.info(f"Flowpath crosswalk written to {out_path}")
 

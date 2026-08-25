@@ -9,6 +9,7 @@ from .pipeline.processing import (
     reduce_combine_base_hydrofabric,
 )
 from .pipeline.trace_graph_attributes import trace_hydrofabric_attributes
+from .pipeline.validate_hf import validate_hf
 from .pipeline.write import write_base_hydrofabric
 from .task_instance import TaskInstance
 
@@ -23,4 +24,5 @@ __all__ = [
     "write_base_hydrofabric",
     "build_graph",
     "TaskInstance",
+    "validate_hf",
 ]

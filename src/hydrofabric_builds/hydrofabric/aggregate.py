@@ -5,6 +5,7 @@ from itertools import chain
 from typing import Any
 
 import rustworkx as rx
+from shapely.geometry import LineString
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import linemerge, unary_union
 
@@ -138,12 +139,17 @@ def _process_aggregation_pairs(
                         ref_id_to_percentage[fp_id] /= total_percentage
 
             # Get geometries from lookup dicts
-            line_geoms: list[BaseGeometry] = [
+            line_geoms: list[BaseGeometry] | list[LineString] = [
                 fp_lookup[fp_id]["shapely_geometry"] for fp_id in fp_geometry_ids if fp_id in fp_lookup
             ]
             polygon_geoms: list[BaseGeometry] = [
                 div_lookup[fp_id]["shapely_geometry"] for fp_id in group_ids if fp_id in div_lookup
             ]
+
+            try:
+                linestrings = linemerge(list(chain.from_iterable(geom.geoms for geom in line_geoms)))
+            except AttributeError:
+                linestrings = linemerge(line_geoms)
 
             results.append(
                 {
@@ -155,7 +161,7 @@ def _process_aggregation_pairs(
                     "length_km": length_km,
                     "area_sqkm": div_area_sum,
                     "ref_id_to_percentage": ref_id_to_percentage,
-                    "line_geometry": linemerge(list(chain.from_iterable(geom.geoms for geom in line_geoms))),
+                    "line_geometry": linestrings,
                     "polygon_geometry": unary_union(polygon_geoms) if polygon_geoms else None,
                 }
             )
@@ -308,65 +314,6 @@ def _process_non_nextgen_flowpaths(
     return results
 
 
-def _process_virtual_flowpaths(
-    classifications: Classifications,
-    fp_lookup: dict[str, dict[str, Any]],
-    div_lookup: dict[str, dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Process virtual flowpaths - each tuple pair becomes one virtual flowpath.
-
-    Each (flowpath_id, downstream_target) tuple represents a single virtual flowpath
-    that should NOT be merged with others, even if they share the same downstream.
-
-    Parameters
-    ----------
-    classifications : Classifications
-        Classification results
-    fp_lookup : dict[str, dict[str, Any]]
-        Flowpath lookup dict with shapely_geometry
-    div_lookup : dict[str, dict[str, Any]]
-        Divide lookup dict with shapely_geometry
-
-    Returns
-    -------
-    list[dict[str, Any]]
-        Virtual flowpath data - one entry per tuple pair
-    """
-    results: list[dict[str, Any]] = []
-
-    # Each tuple (fp_id, downstream_target) is a separate virtual flowpath
-    for fp_id, downstream_target in classifications.virtual_flowpath_pairs:
-        if fp_id not in fp_lookup:
-            logger.debug(f"Flowpath {fp_id} not found in lookup")
-            continue
-
-        fp_data = fp_lookup[fp_id]
-
-        if fp_id in div_lookup:
-            area_sqkm = float(div_lookup[fp_id]["shapely_geometry"].area / 1e6)
-        else:
-            area_sqkm = 0.0
-        # Single flowpath attributes
-        length_km = float(fp_data["shapely_geometry"].length / 1e3)  # m to km
-        hydroseq = int(fp_data["hydroseq"])
-        vpu_id = fp_data["VPUID"]
-
-        results.append(
-            {
-                "ref_ids": [fp_id],  # Single flowpath in a list
-                "dn_id": downstream_target,  # Where this virtual flowpath connects
-                "up_id": fp_id,  # Same as the only flowpath
-                "vpu_id": vpu_id,
-                "hydroseq": hydroseq,
-                "length_km": length_km,
-                "area_sqkm": area_sqkm,
-                "line_geometry": fp_lookup[fp_id]["shapely_geometry"],
-            }
-        )
-
-    return results
-
-
 def _process_non_nextgen_virtual_flowpaths(
     classifications: Classifications,
     fp_lookup: dict[str, dict[str, Any]],
@@ -451,6 +398,9 @@ def _process_non_nextgen_virtual_flowpaths(
         # Aggregate geometry
         line_geoms = [fp_lookup[fp_id]["shapely_geometry"] for fp_id in fp_geometry_ids if fp_id in fp_lookup]
 
+        # Track which ref FPs in this chain have divides (for headwater area folding)
+        div_ref_ids = [div_id for div_id in component_fp_ids if div_id in div_lookup]
+
         results.append(
             {
                 "ref_ids": component_fp_ids,  # All connected ref_ids in this component
@@ -460,11 +410,96 @@ def _process_non_nextgen_virtual_flowpaths(
                 "hydroseq": hydroseq,
                 "length_km": length_km,
                 "area_sqkm": area_sqkm,
-                "line_geometry": linemerge(list(chain.from_iterable(geom.geoms for geom in line_geoms))),
+                "div_ref_ids": div_ref_ids,
+                "line_geometry": linemerge(
+                    list(
+                        chain.from_iterable(
+                            (geom.geoms if geom.geom_type == "MultiLineString" else [geom])
+                            for geom in line_geoms
+                        )
+                    )
+                ),
             }
         )
 
     return results
+
+
+def _fold_headwater_divides(
+    non_nextgen_virtual_flowpaths: list[dict[str, Any]],
+    aggregates: list[dict[str, Any]],
+    independents: list[dict[str, Any]],
+    connectors: list[dict[str, Any]],
+    fp_lookup: dict[str, dict[str, Any]],
+    div_lookup: dict[str, dict[str, Any]],
+) -> None:
+    """Fold headwater divides from non-nextgen virtual chains into downstream NHF units.
+
+    When a headwater with a divide becomes non-nextgen virtual, its divide area must be
+    merged into the downstream NHF unit to maintain area accounting invariants.
+
+    Modifies aggregates, independents, and connectors in place.
+    """
+    # Build map: ref_id -> NHF unit dict (from aggregates, independents, connectors)
+    ref_id_to_nhf_unit: dict[str, dict[str, Any]] = {}
+    for unit in aggregates:
+        ref_ids = unit["ref_ids"]
+        if isinstance(ref_ids, list):
+            for rid in ref_ids:
+                ref_id_to_nhf_unit[rid] = unit
+        else:
+            ref_id_to_nhf_unit[ref_ids] = unit
+    for unit in independents:
+        ref_id_to_nhf_unit[unit["ref_ids"]] = unit
+    for unit in connectors:
+        ref_id_to_nhf_unit[unit["ref_ids"]] = unit
+
+    for vfp in non_nextgen_virtual_flowpaths:
+        div_ref_ids = vfp.get("div_ref_ids", [])
+        if not div_ref_ids:
+            continue
+
+        # Find downstream NHF unit via dn_id's flowpath_toid
+        dn_id = vfp["dn_id"]
+        if dn_id not in fp_lookup:
+            continue
+        target_ref_id = str(int(fp_lookup[dn_id]["flowpath_toid"]))
+
+        nhf_unit = ref_id_to_nhf_unit.get(target_ref_id)
+        if nhf_unit is None:
+            continue
+
+        # Merge headwater divide geometry and area into the downstream NHF unit
+        for div_id in div_ref_ids:
+            if div_id not in div_lookup:
+                continue
+            hw_div_geom = div_lookup[div_id]["shapely_geometry"]
+            hw_div_area = hw_div_geom.area / 1e6  # m2 to km2
+
+            # Union polygon geometry
+            if nhf_unit.get("polygon_geometry") is not None:
+                nhf_unit["polygon_geometry"] = unary_union([nhf_unit["polygon_geometry"], hw_div_geom])
+            else:
+                nhf_unit["polygon_geometry"] = hw_div_geom
+
+            nhf_unit["area_sqkm"] = nhf_unit.get("area_sqkm", 0) + hw_div_area
+
+        # Add percentage entries for headwater ref FPs and re-normalize
+        ref_id_to_percentage = nhf_unit.get("ref_id_to_percentage", {})
+        total_area = nhf_unit["area_sqkm"]
+        if total_area > 0:
+            for div_id in div_ref_ids:
+                if div_id in div_lookup:
+                    div_area = div_lookup[div_id]["shapely_geometry"].area / 1e6
+                    ref_id_to_percentage[div_id] = div_area / total_area
+
+            # Re-normalize all percentages to sum to 1.0
+            total_pct = sum(ref_id_to_percentage.values())
+            if total_pct > 0:
+                for rid in ref_id_to_percentage:
+                    ref_id_to_percentage[rid] /= total_pct
+
+            nhf_unit["ref_id_to_percentage"] = ref_id_to_percentage
 
 
 def _aggregate_geometries(
@@ -498,10 +533,13 @@ def _aggregate_geometries(
 
     connectors = _process_connectors(classifications, fp_lookup, div_lookup)
 
-    virtual_flowpaths = _process_virtual_flowpaths(classifications, fp_lookup, div_lookup)
-
     non_nextgen_virtual_flowpaths = _process_non_nextgen_virtual_flowpaths(
         classifications, fp_lookup, div_lookup, subgraph, node_indices
+    )
+
+    # Fold headwater divides from non-nextgen virtual chains into downstream NHF units
+    _fold_headwater_divides(
+        non_nextgen_virtual_flowpaths, aggregates, independents, connectors, fp_lookup, div_lookup
     )
 
     return Aggregations(
@@ -509,6 +547,5 @@ def _aggregate_geometries(
         independents=independents,
         non_nextgen_flowpaths=non_nextgen_flowpaths,
         connectors=connectors,
-        virtual_flowpaths=virtual_flowpaths,
         non_nextgen_virtual_flowpaths=non_nextgen_virtual_flowpaths,
     )

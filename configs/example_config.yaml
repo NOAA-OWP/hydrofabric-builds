@@ -7,7 +7,7 @@ crs: EPSG:5070
 build:
   reference_divides_path: data/reference/reference_divides.parquet
   reference_flowpaths_path: data/reference/reference_flowpaths.parquet
-  # debug_outlet_count: 2000 # If specified, only the total amount of rivers here will be built
+  #debug_outlet_count: 2000 # If specified, only the total amount of rivers here will be built
   divide_aggregation_threshold: 3.0
 
 # choose tasks to run
@@ -18,8 +18,9 @@ tasks:
   waterbodies: True
   hydrolocations: True
   gages: True
+  lakes: True
   fp_crosswalk: True
-
+  validate_hf: True
 
 # flowpaths
 flowpath_attributes:
@@ -123,10 +124,6 @@ divide_attributes:
       file_name: glaciers/glims_20250624.parquet # must include 'glacier' or 'glims' to be used
       agg_type: percent
       field_name: glacier_percent
-    groundwater:
-      file_name: gw/gw.csv # must include 'gw' or 'groundwater' to be used
-      agg_type: groundwater
-      field_name: groundwater # field name not honored, all fields in csv will be joined
     lzfpm:
       file_name: sac-sma/LZFPM.tif
       agg_type: mean
@@ -243,13 +240,18 @@ divide_attributes:
       file_name: ueb/dec.tif
       agg_type: mean
       field_name: temp_delta_dec_mean
+    gwbuckparm:
+      file_name: gw/GWBUCKPARM_CONUS_FullRouting.nc
+      file_name2: gw/spatialweights_1km_LongRange_NWMv3.0.nc
+      agg_type: groundwater
+      field_name: groundwater
 
 # waterbodies - all values have defaults
 waterbodies:
   input_dir: data/reservoirs
   output_dir: data/reservoirs/output
-  rfcda_output_name: rfc-da-hydraulics-v2.gpkg
-  rfcda_file: data/reservoirs/output/rfc-da-hydraulics-v2.gpkg # Note: By default this concatenates output_dir and rfcda_output_name but can be specified
+  rfcda_output_name: rfc-da-hydraulics-v3.gpkg
+  rfcda_file: data/reservoirs/output/rfc-da-hydraulics-v3.gpkg # Note: By default this concatenates output_dir and rfcda_output_name but can be specified
   default_src_crs: EPSG:4326
   work_crs: EPSG:5070
   nid:
@@ -273,6 +275,7 @@ waterbodies:
     ref_wb_id_col: ref_fab_wb
     min_wb_area_sqkm: 0.2
     max_distance_m: 1000.0
+    ref_res_keep: [ls-68980, ls-64223, ls-58669, ls-58869, ls-56815, ls-56599, ls-62263,  ls-58959, ls-58063, ls-45808, ls-50936, ls-52001, ls-46254, ls-54770, ls-53644, ls-38499, ls-13307, ls-32263, ls-31144, ls-28440,  ls-16225, ls-16263, ls-5817, ls-3502, ls-3207, ls-3159,  ls-3829, ls-2065, ls-2334, ls-2143 ]
   osm:
     path: source_files/osm_dams_all.gpkg
     layer: osm_dams_all
@@ -283,12 +286,13 @@ waterbodies:
     prefer_crs_of_dem: True
     band: 1
     nodata: null
-  nwm:
+  nwm_lakes:
     prep_nwm_lakes: False # set to true if you want to do this, or it will run if file not found
     input_path: "source_files/nwm_patch_conus_nextgen.gpkg"
     layer: "lakes"
     buffer_size_m: 500
     output_path: "source_files/nwm_lakes.gpkg"
+    lakes_keep: [10998421, 11002485, 10998695, 10998319, 10998263, 10998695, 21638156, 166899333, 18415569, 120052349, 11629443, 167671349, 19268768, 17999940, 17951023, 120052740, 4620258, 16729991, 1514163, 20052547, 24005647 ]
   rules:
     max_waterbody_nearest_dist_m: 1000.0
     min_area_sqkm: 0.2
@@ -307,8 +311,8 @@ gages:
         path: TXDOT_gages/TXDOT_gages.txt
         gage_source_crs: EPSG:4326
         id_col_name: site_no
-      CADWR_ENVCA:
-        path: CADWR_ENVCA/gage_xy.csv
+      other:
+        path: other/gage_xy_v1.1.csv
         gage_source_crs: EPSG:4326
         id_col_name: site_no
         x_col_name: lon
@@ -321,13 +325,17 @@ gages:
         path: nwm_calib/nwm_calib_gages_07112025.csv
         gage_source_crs: EPSG:4326
         id_col_name: site_no
+      routelink:
+        path: routelink/RouteLink_CONUS_EPSG4326.gpkg
+        gage_source_crs: EPSG:4326
+        id_col_name: gages
     target:
       crs: EPSG:5070
       snap_tolerance_m: 100.0
       update_existing: True
       exclude_ids: ["15056210", "15493000"]
-      out_gpkg: gages/gages.gpkg
-      gpkg_layer_name: gages
+      out_gpkg: gages/gages_v1.gpkg
+      gpkg_layer_name: gages_v1
 
   ###--------------------------------------------
   ## A file for USGS upstream area and basins shapefiles
@@ -339,11 +347,11 @@ gages:
     layer_points: "sites"
 
   ###--------------------------------------------
-  ##SNAPING FLOWPATHS TO GAGES based on upstream catchments area
+  ## SNAPPING FLOWPATHS TO GAGES based on upstream catchments area
   ###--------------------------------------------
   assign_fp_to_gages:
    rel_err: 0.25                    # relative acceptable error between total upstream area and USGS upstream area.
-   buffer_m: 1000.0                 # Buffering around point gages to find flowpaths. in meters
+   buffer_m: 7000.0                # Buffering around point gages to find flowpaths. in meters
    parallel: False                  # serial (False) or parallel (True)
    max_workers: null                  # None: if serial
    USGS_NLDI_crs: EPSG:4326      # usgs crs used in NLDI API. more info: https://waterdata.usgs.gov/blog/nldi-intro/
@@ -370,3 +378,26 @@ fp_crosswalk:
   outputs:
     # final full-table crosswalk output
     path: data/nhd-crosswalk/nhd_crosswalk.parquet
+
+# --------------------------------------------------
+# validate hydrofabric
+# --------------------------------------------------
+validate_hf:
+  calibration_gages_path: data/gages/validation/calibratable_gages.csv
+  routelink_gages_path: data/gages/routelink/RouteLink_CONUS_EPSG4326.gpkg
+
+#---------------------------------------------------
+# lakes
+#---------------------------------------------------
+lakes:
+  associate_flowpaths: True # this will run the flowpath association
+  input_path: "data/lakes/input/nwm_lakes_sconus_input.gpkg"
+  input_layer: "nwm_lakes"
+  processed_path: "data/lakes/output/sconus_lakes_fp_associated.gpkg" # can be empty or populated
+  flowpath_association_method: "polygon_outlet" # "nearest_point" or "polygon_outlet"
+  populate_hydaulics: True
+  id_field: "newID"
+  search_radius_m: 25000
+  attrib_src_path: "data/lakes/input/nwm_patch_conus_nextgen.gpkg" # file to get attributes from
+  attrib_src_layer: "lakes"
+  attrib_src_key: "lake_id"

@@ -19,7 +19,7 @@ def weighted_circular_mean(values: NDArray, coverage: NDArray) -> NDArray | floa
     Returns
     -------
     NDArray | float
-        Array with circular mean on interval [-np.pi, np.pi) or NaN if inside of a lake
+        Array with circular mean in degrees on interval [0, 360) or NaN if inside of a lake
     """
     if isinstance(values, np.ma.MaskedArray):
         if values.count() == 0:
@@ -43,8 +43,8 @@ def weighted_circular_mean(values: NDArray, coverage: NDArray) -> NDArray | floa
     C = np.sum(weights * np.cos(p * (values - phi)), axis) / np.sum(weights, axis)
     S = np.sum(weights * np.sin(p * (values - phi)), axis) / np.sum(weights, axis)
 
-    # angle in the interval [-np.pi, np.pi)
-    theta = np.arctan2(S, C)
+    # angle in degrees on the interval [0, 360)
+    theta = np.degrees(np.arctan2(S, C)) % 360
 
     return theta
 

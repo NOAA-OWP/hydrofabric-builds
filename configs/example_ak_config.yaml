@@ -1,0 +1,301 @@
+# global settings
+output_dir: data/
+crs: EPSG:3338
+output_name: ak_nhf_1.1.4.gpkg # If not specified, will default to version
+
+# hf builds
+build:
+  reference_divides_path: data/reference/ak_0.1.7_reference_divides.parquet
+  reference_flowpaths_path: data/reference/ak_0.1.7_reference_flowpaths.parquet
+  #debug_outlet_count: 2000 # If specified, only the total amount of rivers here will be built
+  divide_aggregation_threshold: 3.0
+
+# choose tasks to run
+tasks:
+  build_hydrofabric: True
+  divide_attributes: True
+  flowpath_attributes: True
+  waterbodies: False # not present in OCONUS
+  hydrolocations: True
+  gages: True
+  lakes: True
+  fp_crosswalk: True
+  validate_hf: True
+
+flowpath_attributes:
+  flowpath_id: fp_id
+  use_stream_order: True
+  dem_path: data/ak/divide-attributes/usgs/ak_dem_250.tif
+
+
+# divide attributes
+divide_attributes:
+  processes: 1
+  data_dir: data/ak/divide-attributes
+  divide_id: div_id
+  tmp_dir: data/ak/tmp/divide-attributes
+  split_vpu: False
+  debug: False
+  domain_mask: data/ak/divide-attributes/domain/ak_nextgen.gpkg
+  domain_mask_layer: divides
+  divides_masked: data/ak/divide-attributes/domain/ak_divides_masked.gpkg
+  attributes: # attributes must be specified - there are no defaults
+    bexp1:
+      file_name: nwm/bexp_0.tif
+      agg_type: mode
+      field_name: bexp_mode
+    isltyp:
+      file_name: nwm/ISLTYP.tif
+      agg_type: mode
+      field_name: isltyp_mode
+    ivgtyp:
+      file_name: nwm/IVGTYP.tif
+      agg_type: mode
+      field_name: ivgtyp_mode
+    dksat:
+      file_name: nwm/dksat_0.tif
+      agg_type: weighted_geometric_mean
+      field_name: dksat_geomean
+    psisat:
+      file_name: nwm/psisat_0.tif
+      agg_type: weighted_geometric_mean
+      field_name: psisat_geomean
+    cwpvt:
+      file_name: nwm/cwpvt.tif
+      agg_type: mean
+      field_name: cwpvt_mean
+    mp:
+      file_name: nwm/mp.tif
+      agg_type: mean
+      field_name: mp_mean
+    mfsno:
+      file_name: nwm/mfsno.tif
+      agg_type: mean
+      field_name: mfsno_mean
+    quartz:
+      file_name: nwm/quartz_0.tif
+      agg_type: mean
+      field_name: quartz_mean
+    refkdt:
+      file_name: nwm/refkdt.tif
+      agg_type: mean
+      field_name: refkdt_mean
+    slope_1km:
+      file_name: nwm/slope.tif
+      agg_type: mean
+      field_name: slope1km_mean
+    smcmax:
+      file_name: nwm/smcmax_0.tif
+      agg_type: mean
+      field_name: smcmax_mean
+    smcwlt:
+      file_name: nwm/smcwlt_0.tif
+      agg_type: mean
+      field_name: smcwlt_mean
+    vcmx:
+      file_name: nwm/vcmx25.tif
+      agg_type: mean
+      field_name: vcmx_mean
+    impervious:
+      file_name: impervious/ak_full_imperv_percent.tif
+      agg_type: mean
+      field_name: imperv_mean
+    twi:
+      file_name: twi/twi_ak.tif
+      agg_type: quartile_dist
+      field_name: twi_quartile
+    twi_2:                      # another twi option
+      file_name: twi/twi_ak.tif
+      agg_type: quantile_dist
+      field_name: twi_quantile
+    elevation:
+      file_name: usgs/ak_dem_250.tif
+      agg_type: mean
+      field_name: elevation_mean
+    slope:
+      file_name: usgs/ak_slope_250.tif
+      agg_type: mean
+      field_name: slope250m_mean
+    aspect:
+      file_name: usgs/ak_aspect_250.tif
+      agg_type: weighted_circular_mean
+      field_name: aspect_circmean
+    glaciers:
+      file_name: glaciers/glims_20250624.parquet # must include 'glacier' or 'glims' to be used
+      agg_type: percent
+      field_name: glacier_percent
+    mfmin:
+      file_name: snow17/MFMIN.tif
+      agg_type: mean
+      field_name: mfmin_mean
+    mfmax:
+      file_name: snow17/MFMAX.tif
+      agg_type: mean
+      field_name: mfmax_mean
+    uadj:
+      file_name: snow17/UADJ.tif
+      agg_type: mean
+      field_name: uadj_mean
+    axaj:
+      file_name: nwm/AXAJ.tif
+      agg_type: mean
+      field_name: a_xinanjiang_inflection_point_parameter
+    bxaj:
+      file_name: nwm/BXAJ.tif
+      agg_type: mean
+      field_name: b_xinanjiang_shape_parameter
+    xxaj:
+      file_name: nwm/XXAJ.tif
+      agg_type: mean
+      field_name: x_xinanjiang_shape_parameter
+    temp_delta_jan:
+        file_name: ueb/jan.tif
+        agg_type: mean
+        field_name: temp_delta_jan_mean
+    temp_delta_feb:
+      file_name: ueb/feb.tif
+      agg_type: mean
+      field_name: temp_delta_feb_mean
+    temp_delta_mar:
+      file_name: ueb/mar.tif
+      agg_type: mean
+      field_name: temp_delta_mar_mean
+    temp_delta_apr:
+      file_name: ueb/apr.tif
+      agg_type: mean
+      field_name: temp_delta_apr_mean
+    temp_delta_may:
+      file_name: ueb/may.tif
+      agg_type: mean
+      field_name: temp_delta_may_mean
+    temp_delta_jun:
+      file_name: ueb/jun.tif
+      agg_type: mean
+      field_name: temp_delta_jun_mean
+    temp_delta_jul:
+      file_name: ueb/jul.tif
+      agg_type: mean
+      field_name: temp_delta_jul_mean
+    temp_delta_aug:
+      file_name: ueb/aug.tif
+      agg_type: mean
+      field_name: temp_delta_aug_mean
+    temp_delta_sep:
+      file_name: ueb/sep.tif
+      agg_type: mean
+      field_name: temp_delta_sep_mean
+    temp_delta_oct:
+      file_name: ueb/oct.tif
+      agg_type: mean
+      field_name: temp_delta_oct_mean
+    temp_delta_nov:
+      file_name: ueb/nov.tif
+      agg_type: mean
+      field_name: temp_delta_nov_mean
+    temp_delta_dec:
+      file_name: ueb/dec.tif
+      agg_type: mean
+      field_name: temp_delta_dec_mean
+    gwbuckparm:
+      file_name: gw/GWBUCKPARM_AK_FullRouting.nc
+      file_name2: gw/spatialweights_AK_FullRouting.nc
+      agg_type: groundwater
+      field_name: groundwater
+
+
+
+gages:
+  gages:
+    inputs:
+      usgs_discontinued:
+        dir: usgs_gages_discontinued
+        gage_source_crs: EPSG:4326
+        id_col_name: site_no
+      usgs_active:
+        dir: usgs_active_gages
+        id_col_name: site_no
+      CIROH_UA:
+        path: CIROH_UA/gage_area.csv
+        id_col_name: gage
+        area_col_name: area_sqkm
+      nwm_calib_gages:
+        path: nwm_calib/nwm_calib_gages_07112025.csv
+        gage_source_crs: EPSG:4326
+        id_col_name: site_no
+      routelink:
+        path: routelink/RouteLink_AK_EPSG4326.gpkg
+        gage_source_crs: EPSG:4326
+        id_col_name: gages
+      other:
+        path: other/gage_xy_v1.1.csv
+        gage_source_crs: EPSG:4326
+        id_col_name: site_no
+        x_col_name: lon
+        y_col_name: lat
+    target:
+      crs: EPSG:3338
+      snap_tolerance_m: 100.0
+      update_existing: True
+      exclude_ids: []
+      out_gpkg: gages/gages_ak.gpkg
+      gpkg_layer_name: gages
+
+  ###--------------------------------------------
+  ## A file for USGS upstream area and basins shapefiles
+  ###--------------------------------------------
+  NLDI_upstream_basins:
+    run_NLDI_upstream_basins: False # OCONUS does not have upstream basins
+    path: nldi_upstream_basins.gpkg
+    layer_polys: NLDI_upstream_basins
+    layer_points: "sites"
+
+  ###--------------------------------------------
+  ##SNAPPING FLOWPATHS TO GAGES based on upstream catchments area
+  ###--------------------------------------------
+  assign_fp_to_gages:
+   rel_err: 0.25                    # relative acceptable error between total upstream area and USGS upstream area.
+   buffer_m: 7000.0                 # Buffering around point gages to find flowpaths. in meters
+   parallel: False                  # serial (False) or parallel (True)
+   max_workers: null                  # None: if serial
+   USGS_NLDI_crs: EPSG:4326      # usgs crs used in NLDI API. more info: https://waterdata.usgs.gov/blog/nldi-intro/
+   work_crs: EPSG:3338          # an area-equal crs to calculate buffers and distances
+
+# --------------------------------------------------
+# validate hydrofabric
+# --------------------------------------------------
+validate_hf:
+  calibration_gages_path: data/gages/validation/calibratable_gages.csv
+  routelink_gages_path: data/gages/routelink/RouteLink_AK_EPSG4326.gpkg
+
+#---------------------------------------------------
+# flowpath crosswalk (fp_crosswalk)
+# --------------------------------------------------
+fp_crosswalk:
+  # reference (file1) – usually hydrofabric reference flowpaths
+  reference:
+    id_col: flowpath_id                     # id1_col in code
+
+  # target network (file2) – e.g., NWM or NHDPlus
+  target:
+    path: data/reference/nwm_flows_alaska_nwmv3_ID_v2.gpkg               # <- file2
+    layer: nwm_flows_alaska_nwmv3_ID_v2                # layer2 in code
+    id_col: ID                             # id2_col in code
+
+  # geometric / matching parameters
+  search_radius_m: 10.0       # buffer radius around each reference flowline
+  percent_inside_min: 0.005    # min pct of matched path inside band for single-candidate shortcut
+
+  outputs:
+    # final full-table crosswalk output
+    path: data/nhd-crosswalk/nhd_crosswalk_ak.parquet
+
+#---------------------------------------------------
+# nwm lakes
+#--------------------------------------------------
+lakes:
+  input_path: "data/lakes/input/ak_lakeparm.gpkg"
+  processed_path: "data/lakes/output/ak_lakes_fp_associated.gpkg"
+  associate_flowpaths: True
+  flowpath_association_method: "nearest_point"
+  populate_hydaulics: False
+  id_field: "lake_id"

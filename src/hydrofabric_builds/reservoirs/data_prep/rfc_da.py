@@ -9,6 +9,7 @@ import pandas as pd
 
 from hydrofabric_builds.reservoirs.data_prep.DEM_helper import extract_elev_at_points
 from hydrofabric_builds.reservoirs.data_prep.hydraulics import populate_hydraulics
+from hydrofabric_builds.reservoirs.data_prep.nwm_lakes import find_lake_duplicates
 from hydrofabric_builds.reservoirs.data_prep.osm_dams import build_osm_wb_elevs
 from hydrofabric_builds.reservoirs.data_prep.ref_wb_link import build_ref_wb_elevs
 
@@ -26,6 +27,7 @@ def build_rfc_da_locs(
     default_crs: str,
     max_waterbody_nearest_dist_m: float,
     min_area_sqkm: float,
+    res_keep: list[str],
 ) -> gpd.GeoDataFrame:
     """
     Python equivalent of the middle part:
@@ -44,12 +46,15 @@ def build_rfc_da_locs(
     :param out_gpkg: output path
     :param max_waterbody_nearest_dist_m: maximum distance between points and waterbodies
     :param min_area_sqkm: minimum waterbody area to be considered
+    :param res_keep: list of reference reservoir `dam_id`s to keep
     :return: geodataframe file
     """
     # res + candidates (same as before)
     res = gpd.read_file(ref_reservoirs_path)
     da = res[
-        (res["distance_to_fp_m"] < max_waterbody_nearest_dist_m) & (res["wb_areasqkm"] >= min_area_sqkm)
+        ((res["distance_to_fp_m"] < max_waterbody_nearest_dist_m) & (res["wb_areasqkm"] >= min_area_sqkm))
+        | (res["lk"] == True)  # noqa: E712
+        | (res["dam_id"].isin(res_keep))
     ].copy()
 
     # read cleaned NID (GPKG or Parquet or CSV)
@@ -142,6 +147,7 @@ def build_rfc_da_hydraulics(
     osm_ref_wb_path: str | Path,
     nid_clean_path: str | Path,
     hf_lakes_path: str | Path,
+    ref_fp_path: str | Path,
     max_waterbody_nearest_dist_m: float,
     min_area_sqkm: float,
     out_dir: str | Path,
@@ -149,6 +155,9 @@ def build_rfc_da_hydraulics(
     work_crs: str,
     default_crs: str,
     use_hazard: bool = True,
+    wb_buffer: int | float = 200,  # lakes 2.2
+    res_keep: list[str] | None = None,
+    lakes_keep: list[int] | None = None,
 ) -> gpd.GeoDataFrame:
     """
     End-to-end Python equivalent of 03_hydraulics.R.
@@ -169,6 +178,9 @@ def build_rfc_da_hydraulics(
     :param min_area_sqkm: minimum waterbody area to be considered
     :param out_dir: output directory
     :param use_hazard:
+    :param wb_buffer: meters to buffer waterbodies when matching Hf 2.2/NWM lakes
+    :param res_keep: list of reservoirs dam_id to keep regardless of criteria
+    :param lakes_keep: list of lake_ids to keep regardless of criter
     :return: rfc_da geodataframe file
     """
     out_dir = Path(out_dir)
@@ -177,36 +189,56 @@ def build_rfc_da_hydraulics(
     ref_wb_elevs_path = out_dir / "ref_wb_elevs.gpkg"
     osm_wb_elevs_path = out_dir / "osm_wb_elevs.gpkg"
     rfc_da_locs_path = out_dir / "rfc-da-locs.gpkg"
+    ref_res_tmp_path = out_dir / "ref_res_tmp.gpkg"
+    lakes_tmp_path = out_dir / "nwm_lakes_tmp.gpkg"
     rfc_da_hydr_path = out_rfcda
+    res_keep = res_keep if res_keep is not None else []
+    lakes_keep = lakes_keep if lakes_keep is not None else []
+
+    # Prep HF 2.2 lakes
+    logger.info("Prepping HF 2.2 lakes")
+    find_lake_duplicates(
+        lakes_path=hf_lakes_path,
+        lakes_layer="lakes",
+        ref_wb_path=ref_wb_path,
+        ref_res_path=ref_reservoirs_path,
+        ref_fp_path=ref_fp_path,
+        wb_buffer=wb_buffer,
+        lakes_tmp_path=lakes_tmp_path,
+        ref_res_tmp_path=ref_res_tmp_path,
+        lakes_keep=lakes_keep,
+    )
 
     # 1) WB elevations (ref + OSM)
     logger.info("Building reference reservoirs elevation")
     build_ref_wb_elevs(
         dem_path,
-        ref_reservoirs_path,
+        ref_res_tmp_path,
         ref_wb_path,
         ref_wb_elevs_path,
         max_waterbody_nearest_dist_m=max_waterbody_nearest_dist_m,
         min_area_sqkm=min_area_sqkm,
         work_crs=work_crs,
+        res_keep=res_keep,
     )
 
     logger.info("Building OSM waterbody elevation")
     build_osm_wb_elevs(
         dem_path,
-        ref_reservoirs_path,
+        ref_res_tmp_path,
         osm_ref_wb_path,
         osm_wb_elevs_path,
         max_waterbody_nearest_dist_m=max_waterbody_nearest_dist_m,
         min_area_sqkm=min_area_sqkm,
         work_crs=work_crs,
+        res_keep=res_keep,
     )
 
     # 2) Dam locations + NID attrs + WB elevs + dam_elev
     logger.info("Building RFC DA locations")
     df_locs = build_rfc_da_locs(
         dem_path=dem_path,
-        ref_reservoirs_path=ref_reservoirs_path,
+        ref_reservoirs_path=ref_res_tmp_path,
         nid_clean_path=nid_clean_path,
         ref_wb_elevs_path=ref_wb_elevs_path,
         osm_wb_elevs_path=osm_wb_elevs_path,
@@ -215,11 +247,13 @@ def build_rfc_da_hydraulics(
         default_crs=default_crs,
         max_waterbody_nearest_dist_m=max_waterbody_nearest_dist_m,
         min_area_sqkm=min_area_sqkm,
+        res_keep=res_keep,
     )
 
     # 3) Join in minimal res (dam_id, ref_fab_fp, x, y)
     logger.info("Joining reservoirs")
-    res = gpd.read_file(ref_reservoirs_path)
+    res = gpd.read_file(ref_res_tmp_path)
+
     res_min = res[["dam_id", "ref_fab_fp", "x", "y"]].drop_duplicates().copy()
 
     # df_locs is GeoDataFrame (geometry 4326); we only need attributes:
@@ -269,8 +303,8 @@ def build_rfc_da_hydraulics(
 
     hydr_gdf = hydr_gdf.drop(columns=["x_x", "y_x"]).rename(columns={"x_y": "x", "y_y": "y"})
 
-    # Patch: Add HF 2.2 Lakes (to be improved)
-    df_lakes = gpd.read_file(hf_lakes_path)
+    # Add filtered HF 2.2 Lakes
+    df_lakes = gpd.read_file(lakes_tmp_path)
 
     df_lakes = df_lakes.rename(
         columns={

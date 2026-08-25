@@ -17,18 +17,19 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
 authors = [
+  { name = "Brodie Alexander", email = "Brodie.A.Alexander@rtx.com" },
   { name = "Tadd Bindas", email = "tadd.bindas@ertcorp.com" },
   { name = "Daniel Cumpton", email = "dcumpton@rtx.com" },
+  { name = "Dylan Lee", email = "dylan.lee@entarian.com" },
   { name = "Quercus Hamlin", email = "qhamlin@asrcfederal.com" },
-  { name = "Brock Hinkson", email = "brock.w.hinkson@rtx.com" },
   { name = "Farshid Rahmani", email = "Farshid.Rahmani@rtx.com" },
+
 ]
 maintainers = [
-  { name = "Tadd Bindas", email = "tadd.bindas@ertcorp.com" },
+  { name = "Brodie Alexander", email = "Brodie.A.Alexander@rtx.com" },
   { name = "Daniel Cumpton", email = "dcumpton@rtx.com" },
+  { name = "Dylan Lee", email = "dylan.lee@entarian.com" },
   { name = "Quercus Hamlin", email = "qhamlin@asrcfederal.com" },
-  { name = "Brock Hinkson", email = "brock.w.hinkson@rtx.com" },
-  { name = "Farshid Rahmani", email = "Farshid.Rahmani@rtx.com" },
 ]
 
 dependencies = [
@@ -53,6 +54,10 @@ dependencies = [
   "rustworkx==0.17.1",
   "exactextract==0.2.2",
   "rasterstats>=0.20.0",
+  "xarray-spatial==0.5.2",
+  "dask==2026.1.2",
+  "zarr==3.1.5",
+  "pandantic==1.0.0"
 ]
 
 [project.optional-dependencies]
@@ -139,7 +144,7 @@ convention = "numpy"
 "*/__init__.py" = ["F401"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = false
 disallow_any_unimported = false
 warn_unused_configs = true

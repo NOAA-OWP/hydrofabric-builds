@@ -22,6 +22,7 @@ def build_ref_wb_elevs(
     min_area_sqkm: float,
     work_crs: str = "EPSG:5070",
     elev_calc: bool = True,
+    res_keep: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Python equivalent of the first chunk:
@@ -38,12 +39,16 @@ def build_ref_wb_elevs(
     :param max_waterbody_nearest_dist_m: maximum distance between points and waterbodies
     :param min_area_sqkm: minimum waterbody area to be considered
     :param elev_calc: flag to whether calculate elevation
+    :param res_keep: list of reservoir `dam_id` to keep
     :return: modified reference_waterbodies file
     """
     # 1) Load reference reservoirs (res) and filter to RFC-DA candidates
     res = gpd.read_file(ref_reservoirs_path)
+    res_keep = res_keep if res_keep is not None else []
     da = res[
-        (res["distance_to_fp_m"] < max_waterbody_nearest_dist_m) & (res["wb_areasqkm"] >= min_area_sqkm)
+        ((res["distance_to_fp_m"] < max_waterbody_nearest_dist_m) & (res["wb_areasqkm"] >= min_area_sqkm))
+        | (res["lk"] == True)  # noqa: E712
+        | (res["dam_id"].isin(res_keep))
     ].copy()
 
     ids = da["ref_fab_wb"].dropna().unique().tolist()

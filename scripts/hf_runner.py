@@ -15,6 +15,7 @@ from hydrofabric_builds.pipeline.build_fp_crosswalk import build_fp_crosswalk
 from hydrofabric_builds.pipeline.build_gages import build_gages
 from hydrofabric_builds.pipeline.build_graph import build_graph
 from hydrofabric_builds.pipeline.build_hydrolocations import build_hydrolocations
+from hydrofabric_builds.pipeline.build_lakes import build_lakes
 from hydrofabric_builds.pipeline.build_waterbodies import build_waterbodies
 from hydrofabric_builds.pipeline.download import download_reference_data
 from hydrofabric_builds.pipeline.processing import (
@@ -23,6 +24,7 @@ from hydrofabric_builds.pipeline.processing import (
     reduce_combine_base_hydrofabric,
 )
 from hydrofabric_builds.pipeline.trace_graph_attributes import trace_hydrofabric_attributes
+from hydrofabric_builds.pipeline.validate_hf import validate_hf
 from hydrofabric_builds.pipeline.write import write_base_hydrofabric
 
 logger = setup_logging()
@@ -192,6 +194,9 @@ def main() -> int:
         if config.tasks.waterbodies:
             runner.run_task("waterbodies", python_callable=build_waterbodies, op_kwargs={})
 
+        if config.tasks.lakes:
+            runner.run_task("lakes", python_callable=build_lakes, op_kwargs={})
+
         if config.tasks.hydrolocations:
             runner.run_task("hydrolocations", python_callable=build_hydrolocations, op_kwargs={})
 
@@ -205,6 +210,9 @@ def main() -> int:
             )
         if config.tasks.fp_crosswalk:
             runner.run_task(task_id="fp_crosswalk", python_callable=build_fp_crosswalk, op_kwargs={})
+
+        if config.tasks.validate_hf:
+            runner.run_task(task_id="validate_hf", python_callable=validate_hf, op_kwargs={})
 
         print("\n" + "=" * 60)
         print("Pipeline completed")

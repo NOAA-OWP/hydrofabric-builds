@@ -40,23 +40,9 @@ class Classifications(BaseModel):
             "Small flowpaths (areasqkm < threshold) that connect two higher-order streams. These have two upstream flowpaths where both have streamorder > 1. They remain independent despite being small because they serve as connectors between large stream branches, and aggregation would present inconsistencies within routing"
         ),
     )
-    virtual_flowpath_pairs: list[tuple[str, ...]] = Field(
-        default_factory=list,
-        description=(
-            "List of virtual flowpath groups. Each tuple contains flowpath IDs "
-            "that form a connected chain (upstream → downstream). "
-            "Multiple tuples can have the same downstream target. "
-            "Example: [('A', 'B', 'C'), ('D', 'E'), ('F',)] where A→B→C, D→E, and F "
-            "are three separate virtual flowpaths."
-        ),
-    )
     non_nextgen_virtual_flowpath_pairs: list[tuple[str, ...]] = Field(
         default_factory=list,
-        description=(
-            "List of non-NextGen virtual flowpath groups. Same structure as "
-            "virtual_flowpath_pairs but for flowpaths that don't connect to "
-            "routing segments."
-        ),
+        description="List of non-NextGen virtual flowpath pairs (source_id, target_id).",
     )
     processed_flowpaths: set[str] = Field(
         default_factory=set,
@@ -92,9 +78,6 @@ class Aggregations(BaseModel):
     connectors: list[dict] = Field(
         description=("A list of connection segments and their geometries"),
     )
-    virtual_flowpaths: list[dict] = Field(
-        description=("A list of all virtual flowpaths and their geometries"),
-    )
     non_nextgen_virtual_flowpaths: list[dict] = Field(
         description=("A list of all non_nextgen virtual flowpaths and their geometries"),
     )
@@ -114,6 +97,7 @@ class Flowpaths:
         """
         return [
             "fp_id",
+            "fp_to_id",
             "dn_nex_id",
             "up_nex_id",
             "div_id",
@@ -132,6 +116,7 @@ class Flowpaths:
         return pa.schema(
             [
                 pa.field("fp_id", pa.int32(), nullable=False),
+                pa.field("fp_to_id", pa.int32(), nullable=True),
                 pa.field("dn_nex_id", pa.int32(), nullable=False),
                 pa.field("up_nex_id", pa.int32(), nullable=True),
                 pa.field("div_id", pa.int32(), nullable=False),
@@ -269,9 +254,8 @@ class HydrofabricCRS(Enum):
 
     AK = 3338
     CONUS = 5070
-    GL = 5070  # TEMP: MAY CHANGE
-    HI = 102007
-    PRVI = 32161
+    HI = 32604
+    PRVI = 6566
 
 
 class BuildHydrofabricConfig(BaseModel):
@@ -288,6 +272,11 @@ class BuildHydrofabricConfig(BaseModel):
 
     divide_aggregation_threshold: float = Field(
         default=3.0, description="Threshold for divides to aggreagate into an upstream catchment [km^2]"
+    )
+
+    headwater_virtual_length_threshold: float = Field(
+        default=0.3,
+        description="Order-1 headwater flowpaths shorter than this length (km) are virtualized instead of independent",
     )
 
     debug_outlet_count: int | None = Field(
@@ -367,9 +356,15 @@ class DivideAttributeConfig(BaseModel):
     agg_type: AggTypeEnum = Field(description="Zonal stats aggregation type")
     field_name: str = Field(description="Output field name for divide attribute")
     file_name: Path = Field(description="File path of attribute raster")
+    file_name2: Path | None = Field(description="Optional file path for a second file", default=None)
+    file_name3: Path | None = Field(description="Optional file path for a third file", default=None)
     tmp: Path = Field(
         description="Temp file path for parquet",
         default_factory=lambda data: Path("/tmp/divide-attributes") / f"tmp_{data['field_name']}.parquet",
+    )
+    tmp_raster: Path = Field(
+        description="Temp file path for groundwater raster",
+        default=Path("/tmp/divide-attributes") / "tmp_raster_file.tif",
     )
 
     @model_validator(mode="after")
@@ -382,6 +377,10 @@ class DivideAttributeConfig(BaseModel):
     def full_file_name(self: Any) -> Self:  # type: ignore[misc,type-var]
         """Join the root data dir to the file name"""
         self.file_name = self.data_dir / self.file_name
+        if self.file_name2:
+            self.file_name2 = self.data_dir / self.file_name2
+        if self.file_name3:
+            self.file_name3 = self.data_dir / self.file_name3
         return self
 
 
@@ -415,11 +414,24 @@ class DivideAttributesModelConfig(BaseModel):
         description="Setting debug to true will save all temporary files. Setting to false will delete files if run fails.",
         default=False,
     )
+    domain_mask: Path | None = Field(
+        default=None,
+        description="Mask a domain to only calculate attributes for a subset. Built to accommodate AK domain being smaller than full state.",
+    )
+    domain_mask_layer: str | None = Field(default=None, description="GPKG layer to use for mask")
+    divides_masked: Path | None = Field(default=None, description="Path to saved masked divides to")
 
     @model_validator(mode="after")
     def make_tmp_dir(self: Any) -> Self:  # type: ignore[misc,type-var]
         """Model validator to create a temp directory if it does not exist"""
         self.tmp_dir.mkdir(parents=True, exist_ok=True)
+        return self
+
+    @model_validator(mode="after")
+    def make_divides_mask(self: Any) -> Self:  # type: ignore[misc,type-var]
+        """Model validator to create a path to save the divides mask if none input"""
+        if self.domain_mask and not self.divides_masked:
+            self.divides_masked = self.data_dir / "divides_mask.gpkg"
         return self
 
 
@@ -441,19 +453,19 @@ class FlowpathAttributesModelConfig(BaseModel):
         default=here() / Path("data/usgs_250m_dem_5070.tif"), title="DEM Path", description="Path to DEM"
     )
     tw_path: Path = Field(
-        default=here() / Path("data/TW_bf_predictions.parquet"),
+        default=None,
         title="Topwidth Path",
-        description="Path to RiverML topwidth predictions",
+        description="Path to RiverML topwidth predictions. If None, it will be skipped.",
     )
     y_path: Path = Field(
-        default=here() / Path("data/Y_bf_predictions.parquet"),
+        default=None,
         title="Y Path",
-        description="Path to RiverML Y predictions",
+        description="Path to RiverML Y predictions. If None, it will be skipped.",
     )
     r_path: Path = Field(
-        default=here() / Path("data/r_predictions.parquet"),
+        default=None,
         title="R Path",
-        description="Path to RiverML R predictions",
+        description="Path to RiverML R predictions. If None, it will be skipped.",
     )
 
 
@@ -637,10 +649,8 @@ class GagesInputs(BaseModel):
     txdot_gages: GageInput = Field(
         default_factory=lambda: GageInput(path=Path("TXDOT_gages/TXDOT_gages.txt"))
     )
-    CADWR_ENVCA: GageInput = Field(
-        default_factory=lambda: GageInput(
-            path=Path("CADWR_ENVCA/gage_xy.csv"), x_col_name="lon", y_col_name="lat"
-        )
+    other: GageInput = Field(
+        default_factory=lambda: GageInput(path=Path("other/gage_xy.csv"), x_col_name="lon", y_col_name="lat")
     )
     CIROH_UA: GageInput = Field(
         default_factory=lambda: GageInput(
@@ -649,6 +659,9 @@ class GagesInputs(BaseModel):
     )
     nwm_calib_gages: GageInput = Field(
         default_factory=lambda: GageInput(path=Path("nwm_calib/nwm_calib_gages_07112025.csv"))
+    )
+    routelink: GageInput = Field(
+        default_factory=lambda: GageInput(path=Path("RouteLink_CONUS_EPSG4326.gpkg"))
     )
 
 
@@ -669,6 +682,14 @@ class GagesBlock(BaseModel):
     input_dir: Path = Path("data/gages")
     inputs: GagesInputs = Field(default_factory=GagesInputs)
     target: GagesTarget = Field(default_factory=GagesTarget)
+    prebuilt_gages: Path | None = Field(
+        default=None,
+        description="Path to a pre-built gages gpkg. If set, skip gage collection (steps 1-8) and use this table for assignment.",
+    )
+    prebuilt_gages_layer: str = Field(
+        default="gages",
+        description="Layer name in the pre-built gages gpkg.",
+    )
 
 
 class NLDIUpstreamBasins(BaseModel):
@@ -716,7 +737,7 @@ class GagesConfig(BaseModel):
             self.gages.inputs.usgs_discontinued,
             self.gages.inputs.usgs_active,
             self.gages.inputs.txdot_gages,
-            self.gages.inputs.CADWR_ENVCA,
+            self.gages.inputs.other,
             self.gages.inputs.nwm_calib_gages,
         ]:
             if inp.dir is not None:
@@ -749,6 +770,7 @@ class ResNWMLakesInputs(BaseModel):
         default=Path("source_files/nwm_lakes.gpkg"),
         description="Output path if creating or file to use in pipeline if not creating. When using defaults, WaterbodiesConfig will inject preceding input path.",
     )
+    lakes_keep: list[int] = Field(default=[], description="List of lake_id's to keep in RFCDA")
 
 
 class ResNIDInputs(BaseModel):
@@ -797,6 +819,9 @@ class ResReferenceReservoirsInputs(BaseModel):
     max_distance_m: float = Field(
         default=1000.0,
         description="max distance of reference reservoir points from column 'distance_to_fp_m'",
+    )
+    ref_res_keep: list[str] = Field(
+        default=[], description="List of reference reservoir dam_id's to keep in RFCDA layer"
     )
 
 
@@ -891,6 +916,65 @@ class WaterbodiesConfig(BaseModel):
         return self
 
 
+class LakesConfig(BaseModel):
+    """Config for NWM Lakes"""
+
+    input_path: Path = Field(
+        default=here() / "data/lakes/nwm_lakes.gpkg", description="File name of source lakes"
+    )
+    input_layer: str | None = Field(
+        default=None, description="Layer name of lakes if input file is a GPKG with mutliple layers"
+    )
+    processed_path: Path = Field(
+        default=here() / "data/lakes/nwm_lakes_process.gpkg",
+        description="File name of source waterbodies with flowpath associations and hydraulics",
+    )
+    associate_flowpaths: bool = Field(
+        default=False, description="Flag to associate waterbodies with reference flowpaths if True"
+    )
+    flowpath_association_method: str = Field(
+        default="point", description="Specify the method used to associate flowpaths"
+    )
+    populate_hydaulics: bool = Field(default=False, description="Flag to populate hydraulics fields if True")
+    id_field: str = Field(default="lake_id", description="ID field in input lakes file")
+    search_radius_m: float | int = Field(
+        default=25000, description="Radius in meters to buffer points for nearest flowpath method"
+    )
+    min_preferred_intersection_len_m: float = Field(
+        default=10.0,
+        description="If associated FP intersection with lake is below this threshold, we will try to look for a better candidate",
+    )
+    fields: list[str] = Field(
+        default=[
+            "lake_id",
+            "res_id",
+            "LkArea",
+            "LkMxE",
+            "WeirC",
+            "WeirL",
+            "WeirE",
+            "OrificeC",
+            "OrificeA",
+            "OrificeE",
+            "Dam_Length",
+            "ifd",
+            "reservoir_index_AnA",
+            "reservoir_index_Extended_AnA",
+            "reservoir_index_GDL_AK",
+            "reservoir_index_Medium_Range",
+            "reservoir_index_Short_Range",
+        ],
+        description="Fields to retain in final layer. IDs and geometry will be kept by default.",
+    )
+    attrib_src_path: Path | None = Field(default=None, description="Source file for importing attributes")
+    attrib_src_layer: str | None = Field(
+        default=None, description="Source file layer for importing attributes"
+    )
+    attrib_src_key: str = Field(
+        default="lake_id", description="Source file key to match when importing attributes"
+    )
+
+
 ### fp_crosswalk  ###
 class FPCrosswalkReference(BaseModel):
     """fp_crosswalk: reference (file1) network"""
@@ -956,3 +1040,68 @@ class FPCrosswalkConfig(BaseModel):
         self.outputs.matches_gpkg = _resolve(self.outputs.matches_gpkg, base)
 
         return self
+
+
+class ValidateHFConfig(BaseModel):
+    """config class for the hf_validate block in the YAML"""
+
+    calibration_gages_path: Path = Path("data/gages/validation/calibratable_gages.csv")
+    routelink_gages_path: Path | None = None
+
+
+class NWMDefaultHydraulics(Enum):
+    """Default values for NWM hydraulic params"""
+
+    WeirC = 0.4
+    WeirL = 10.0  # m
+    OrificeC = 0.1
+    OrificeA = 1.0  # m²
+    ifd = 0.899
+
+
+class GroundWaterProjectionCONUS(Enum):
+    """CRS, origin, and size of CONUS NWM grids for groundwater; source:  Fulldom_CONUS_FullRouting.nc"""
+
+    PROJ4 = "+proj=lcc +lat_1=30 +lat_2=60 +lat_0=40.0000076293945 +lon_0=-97 +x_0=0 +y_0=0 +a=6370000 +b=6370000 +units=m +no_defs"
+    X_ORIGIN = -2303874.17655
+    Y_ORIGIN = 1919874.66329
+    WIDTH = 4608
+    HEIGHT = 3840
+    DX = 1000
+    DY = 1000
+
+
+class GroundWaterProjectionAK(Enum):
+    """CRS, origin, and size of NWM grids for groundwater; source:  Fulldom_AK_FullRouting.nc"""
+
+    PROJ4 = "+proj=stere +lat_0=90 +lat_ts=60 +lon_0=-135"
+    X_ORIGIN = -1130764.7202253528
+    Y_ORIGIN = -2704639.5335353096
+    WIDTH = 3516
+    HEIGHT = 1816
+    DX = 1000
+    DY = 1000
+
+
+class GroundWaterProjectionHI(Enum):
+    """CRS, origin, and size of NWM grids for groundwater; source:  Fulldom_HI_FullRouting.nc"""
+
+    PROJ4 = "+proj=lcc +units=m +a=6370000.0 +b=6370000.0 +lat_1=10.0 +lat_2=30.0 +lat_0=20.6 +lon_0=-157.42 +x_0=0 +y_0=0 +k_0=1.0 +nadgrids=@null +wktext +no_defs"
+    X_ORIGIN = -294950.07097397465
+    Y_ORIGIN = 194950.63030902296
+    WIDTH = 5900
+    HEIGHT = 3900
+    DX = 100
+    DY = 100
+
+
+class GroundWaterProjectionPRVI(Enum):
+    """CRS, origin, and size of NWM grids for groundwater; source:  Fulldom_PRVI_FullRouting.nc"""
+
+    PROJ4 = "+proj=lcc +units=m +a=6370000.0 +b=6370000.0 +lat_1=18.1 +lat_2=18.1 +lat_0=18.1 +lon_0=-65.91 +x_0=0 +y_0=0 +k_0=1.0 +nadgrids=@null +wktext  +no_defs"
+    X_ORIGIN = -149949.83
+    Y_ORIGIN = 54951.032
+    WIDTH = 3000
+    HEIGHT = 1100
+    DX = 100
+    DY = 100

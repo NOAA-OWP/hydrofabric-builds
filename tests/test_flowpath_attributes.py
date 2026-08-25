@@ -11,6 +11,7 @@ from geopandas.testing import assert_geodataframe_equal
 from polars.testing import assert_frame_equal
 from pyprojroot import here
 from rasterio.transform import from_bounds
+from shapely import force_3d
 from shapely.geometry import LineString, MultiLineString
 
 from hydrofabric_builds.hydrofabric.flowpath_attributes import (
@@ -28,7 +29,7 @@ from hydrofabric_builds.schemas.hydrofabric import (
 
 
 @pytest.fixture
-def flowpath_attributes_model_cfg() -> Path:
+def flowpath_attributes_model_cfg() -> FlowpathAttributesModelConfig:
     data_dir = here() / "tests/data/flowpath_attributes"
     data_dir.mkdir(exist_ok=True)
     return FlowpathAttributesModelConfig(
@@ -40,6 +41,19 @@ def flowpath_attributes_model_cfg() -> Path:
         y_path=data_dir / "sample_y.parquet",
         r_path=data_dir / "sample_r.parquet",
         output=data_dir / "output_test.gpkg",
+    )
+
+
+@pytest.fixture
+def flowpath_attributes_model_cfg__null_riverml() -> FlowpathAttributesModelConfig:
+    """Default config missing riverml files"""
+    data_dir = here() / "tests/data/flowpath_attributes"
+    data_dir.mkdir(exist_ok=True)
+    return FlowpathAttributesModelConfig(
+        hf_path=data_dir / "sample_fp_tmp.gpkg",
+        flowpath_id="fp_id",
+        use_stream_order=True,
+        dem_path=data_dir / "sample_dem.tif",
     )
 
 
@@ -178,6 +192,34 @@ def flowpath_attributes_riverml_values(
 
 
 @pytest.fixture
+def flowpath_attributes_riverml_values__null(
+    flowpath_attributes_model_cfg: FlowpathAttributesModelConfig,
+) -> pl.DataFrame:
+    """Results from riverml join if null riverml values"""
+    gdf = gpd.read_file(flowpath_attributes_model_cfg.hf_path, layer="flowpaths")
+
+    df = pl.from_pandas(gdf[["fp_id", "stream_order", "total_da_sqkm"]])
+    df = df.with_columns(
+        pl.lit(None).alias("n"),
+        pl.lit(None).alias("r"),
+        pl.lit(None).alias("y"),
+        pl.lit(None).alias("ncc"),
+        pl.lit(None).alias("btmwdth"),
+        pl.lit(None).alias("chslp"),
+        pl.lit(None).alias("musx"),
+        pl.lit(None).alias("musk"),
+        pl.lit(None).alias("topwdth"),
+        pl.lit(None).alias("topwdthcc"),
+        pl.lit(None).alias("topwdthcc_ml"),
+        pl.lit(None).alias("topwdth_ml"),
+        pl.lit(None).alias("y_ml"),
+        pl.lit(None).alias("r_ml"),
+    )
+
+    return df
+
+
+@pytest.fixture
 def flowpath_attributes_other_values(flowpath_attributes_base_polars_df: pl.DataFrame) -> pl.DataFrame:
     """Results from other attribute calculations based on stream-order derived model"""
     df = flowpath_attributes_base_polars_df
@@ -255,8 +297,8 @@ class TestFlowpathAttributesSchemas:
         assert model.use_stream_order is True
         assert model.flowpath_id == "fp_id"
         assert model.dem_path == here() / Path("data/usgs_250m_dem_5070.tif")
-        assert model.tw_path == here() / Path("data/TW_bf_predictions.parquet")
-        assert model.y_path == here() / Path("data/Y_bf_predictions.parquet")
+        assert model.tw_path is None
+        assert model.y_path is None
 
     @pytest.mark.parametrize(
         "func",
@@ -356,6 +398,22 @@ class TestFlowpathAttributes:
         finally:
             flowpath_attributes_model_cfg.hf_path.unlink(missing_ok=True)
 
+    def test_dem_attributes__linestringz(
+        self,
+        flowpath_attributes_model_cfg: FlowpathAttributesModelConfig,
+        flowpath_attributes_dummy_dem: Path,
+        flowpath_attributes_dummy_gpkg: Path,
+        flowpath_attributes_dem_values: gpd.GeoDataFrame,
+    ) -> None:
+        """Compares DEM values. Requires all un-called fixtures to run correctly. Inputs a linestring Z that will be changed to 2D"""
+        try:
+            gdf = gpd.read_file(flowpath_attributes_model_cfg.hf_path, layer="flowpaths")
+            gdf["geometry"] = gdf.apply(lambda x: force_3d(x["geometry"]), axis=1)
+            gdf = _dem_attributes(flowpath_attributes_model_cfg, gdf)
+            assert_geodataframe_equal(gdf, flowpath_attributes_dem_values, check_less_precise=True)
+        finally:
+            flowpath_attributes_model_cfg.hf_path.unlink(missing_ok=True)
+
     def test_create_base_polars(
         self, flowpath_attributes_dummy_gpkg: Path, flowpath_attributes_base_polars_df: pl.DataFrame
     ) -> None:
@@ -374,6 +432,18 @@ class TestFlowpathAttributes:
         """Join riverml attributes. Requires all un-called fixtures to run correctly."""
         output = _riverml_attributes(flowpath_attributes_model_cfg, flowpath_attributes_base_polars_df)
         assert_frame_equal(output, flowpath_attributes_riverml_values)
+
+    def test_riverml_attributes__null(
+        self,
+        flowpath_attributes_model_cfg__null_riverml: FlowpathAttributesModelConfig,
+        flowpath_attributes_base_polars_df: pl.DataFrame,
+        flowpath_attributes_riverml_values__null: pl.DataFrame,
+    ) -> None:
+        """ "Tests when there are no river ML attributes to join - return null for those fields"""
+        output = _riverml_attributes(
+            flowpath_attributes_model_cfg__null_riverml, flowpath_attributes_base_polars_df
+        )
+        assert_frame_equal(output, flowpath_attributes_riverml_values__null)
 
     def test_other_attributes(
         self,

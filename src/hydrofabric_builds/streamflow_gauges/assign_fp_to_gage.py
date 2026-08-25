@@ -234,6 +234,9 @@ def _crosswalk_fp_id(gdf_gages: gpd.GeoDataFrame, hf_path: Path) -> gpd.GeoDataF
         gages with fp_id and virtual_fp_id
     """
     hf_ref = gpd.read_file(hf_path, layer="reference_flowpaths")
+    if "segment_order" in hf_ref.columns:
+        best_idx = hf_ref.groupby("ref_fp_id")["segment_order"].idxmax()
+        hf_ref = hf_ref.loc[best_idx]
     gdf_gages = gdf_gages.merge(hf_ref[["ref_fp_id", "fp_id", "virtual_fp_id"]], on="ref_fp_id", how="left")
     gdf_gages = gdf_gages.loc[(~gdf_gages["fp_id"].isnull() | ~gdf_gages["virtual_fp_id"].isnull()), :].copy()
     del hf_ref

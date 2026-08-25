@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import rasterio
-from shapely import get_point
+from shapely import force_2d, get_point
 from shapely.geometry import Point
 
 from hydrofabric_builds.schemas.hydrofabric import (
@@ -40,6 +40,7 @@ def _dem_attributes(model_cfg: FlowpathAttributesModelConfig, gdf: gpd.GeoDataFr
     """
     # Assure lines are linestrings and not multi
     gdf["geometry"] = gdf["geometry"].line_merge()
+    gdf["geometry"] = gdf.apply(lambda x: force_2d(x["geometry"]), axis=1)
 
     gdf_ls = gdf.loc[gdf.geometry.geometry.type == "LineString", [model_cfg.flowpath_id, "geometry"]].copy()
     gdf_mls = gdf.loc[
@@ -162,6 +163,10 @@ def _dem_attributes(model_cfg: FlowpathAttributesModelConfig, gdf: gpd.GeoDataFr
         else gdf.merge(gdf_ls, on=model_cfg.flowpath_id, how="left")
     )
 
+    # filter out nulls from missing DEM
+    gdf["mean_elevation"] = np.where(gdf["mean_elevation"] == -999999, np.nan, gdf["mean_elevation"])
+    gdf["slope"] = np.where(gdf["mean_elevation"].isnull(), np.nan, gdf["slope"])
+
     del df_points, points, gdf_ls
 
     return gdf
@@ -220,30 +225,39 @@ def _riverml_attributes(model_cfg: FlowpathAttributesModelConfig, df: pl.DataFra
     df_ref = df_ref.cast({pl.Float64: pl.Int64})
     df_refj = df.join(df_ref, on="fp_id", how="left")
 
-    # tw and y
-    df_tw = pl.read_parquet(model_cfg.tw_path).rename({"FEATUREID": "ref_fp_id", "prediction": "topwdth_ml"})
-    df_y = pl.read_parquet(model_cfg.y_path).rename({"FEATUREID": "ref_fp_id", "prediction": "y_ml"})
-    df_r = pl.read_parquet(model_cfg.r_path).rename({"FEATUREID": "ref_fp_id", "prediction": "r_ml"})
+    # join predictions to fp with ref fp and calculate mean for fp_id (multiple ref_fp_id) for each ML field
+    if model_cfg.tw_path:
+        df_tw = pl.read_parquet(model_cfg.tw_path).rename(
+            {"FEATUREID": "ref_fp_id", "prediction": "topwdth_ml"}
+        )
+        df_tmp = df_refj.join(df_tw, on="ref_fp_id", how="full")
+        df_meantw = df_tmp[["fp_id", "topwdth_ml"]].group_by("fp_id").mean()
+        del df_tmp
+    else:
+        df_meantw = df_refj[["fp_id"]].unique(keep="first").with_columns(pl.lit(None).alias("topwdth_ml"))
 
-    # join predictions to fp with ref fp and calculate mean for fp_id (multiple ref_fp_id)
-    df_tmp = df_refj.join(df_tw, on="ref_fp_id", how="full")
-    df_meantw = df_tmp[["fp_id", "topwdth_ml"]].group_by("fp_id").mean()
-    del df_tmp
+    if model_cfg.y_path:
+        df_y = pl.read_parquet(model_cfg.y_path).rename({"FEATUREID": "ref_fp_id", "prediction": "y_ml"})
+        df_tmp = df_refj.join(df_y, on="ref_fp_id", how="full")
+        df_meany = df_tmp[["fp_id", "y_ml"]].group_by("fp_id").mean()
+        del df_tmp
+    else:
+        df_meany = df_refj[["fp_id"]].unique(keep="first").with_columns(pl.lit(None).alias("y_ml"))
 
-    df_tmp = df_refj.join(df_y, on="ref_fp_id", how="full")
-    df_meany = df_tmp[["fp_id", "y_ml"]].group_by("fp_id").mean()
-    del df_tmp
-
-    df_tmp = df_refj.join(df_r, on="ref_fp_id", how="full")
-    df_meanr = df_tmp[["fp_id", "r_ml"]].group_by("fp_id").mean()
-    del df_tmp
+    if model_cfg.r_path:
+        df_r = pl.read_parquet(model_cfg.r_path).rename({"FEATUREID": "ref_fp_id", "prediction": "r_ml"})
+        df_tmp = df_refj.join(df_r, on="ref_fp_id", how="full")
+        df_meanr = df_tmp[["fp_id", "r_ml"]].group_by("fp_id").mean()
+        del df_tmp
+    else:
+        df_meanr = df_refj[["fp_id"]].unique(keep="first").with_columns(pl.lit(None).alias("r_ml"))
 
     # join back to original fp_id df
     df = df.join(df_meantw, on="fp_id", how="left")
     df = df.join(df_meany, on="fp_id", how="left")
     df = df.join(df_meanr, on="fp_id", how="left")
 
-    del df_ref, df_refj
+    del df_ref, df_refj, df_meanr, df_meantw, df_meany
 
     return df
 
