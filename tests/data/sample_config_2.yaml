@@ -1,0 +1,28 @@
+# main
+output_name: "hf_test.gpkg"
+output_dir: "data/"
+crs: "EPSG:5070"
+
+# choose tasks to run
+tasks:
+  build_hydrofabric: True
+  divide_attributes: True
+  flowpath_attributes: True
+  waterbodies: True
+  hydrolocations: True
+  gages: True
+
+# divide attributes
+divide_attributes:
+  processes: 10
+  data_dir: data/divide_attributes
+  divide_id: div_id
+  tmp_dir: data/tmp/divide-attributes
+  split_vpu: True
+  debug: False
+  attributes: # attributes must be specified - there are no defaults
+    bexp1:
+      data_dir: 'different' # includes data dir
+      file_name: 'nwm/bexp_0.tif'
+      agg_type: 'mode'
+      field_name: 'bexp_mode'

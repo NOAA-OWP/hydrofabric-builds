@@ -1,0 +1,11 @@
+catalog:
+  glue:
+    type: glue
+    s3.endpoint: s3.us-east-1.amazonaws.com
+    warehouse: s3://52fcde3e7-5582-477d-7686ou4ij1ptxj8equ83a5xc51fsuse1b--table-s3
+    region: us-east-1
+    glue_region: us-east-1
+  sql:
+    type: sql
+    uri: sqlite:////tmp/warehouse/pyiceberg_catalog.db
+    warehouse: file:///tmp/warehouse

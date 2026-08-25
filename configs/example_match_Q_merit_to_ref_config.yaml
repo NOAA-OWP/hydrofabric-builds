@@ -1,0 +1,40 @@
+#------------------------------------------------------
+### config file to run examples/match_Q_merit_to_ref.py
+#------------------------------------------------------
+paths:
+  ## path to the file made after running examples/mapping_divides.py
+  ## Also can be found on S3 test account here:
+  ## s3://hydrofabric-data/Q_song_et_al_2025/ref_merit_intersections/nested_final.pkl
+  mapping_divides_path: "/data/intersections_out/nested_final.pkl"
+
+  ## Path to streamflow simulation files that have been downloaded to local path
+  ## Also can be found in S3 data account here: s3://hydrofabric-data/Q_song_et_al_2025/Runoff_sim/
+  flow_dir: "/data/Q_song_et_al_2025"
+
+  ## directory to save the NGEN-format csv files
+  ## this code has been run and a zip file of these csv files has been added to S3 data account here:
+  ##
+  out_dir: "/data/Q_song_et_al_2025/match_Q_merit_to_ref"
+
+  ## Local path to reference fabric gpkg
+  ## Also can be found in S3 data account:
+  ## s3://hydrofabric-data/Q_song_et_al_2025/ref_Q_from_merit/
+  ref_fabric_gpkg: "/data/reference_fabric/sc_reference_fabric.gpkg"
+
+dates:
+  merit_start_date: "1980-01-01"
+  merit_end_date: "2020-12-31"
+  ref_start_date: "2000-01-01 00:00"
+  ref_end_date: "2000-01-20 23:00"
+
+flow:
+  flow_pattern: "Runoff_sim_*.npy"
+  comid_prefix: "comids_"
+
+reference:
+  divide_id_name: "divide_id"
+  ref_layer: "reference_divides"
+
+weights:
+  ## if a reference divide is not fully covered by MERIT basins, the weight will be re-normalized
+  normalize_weights: true

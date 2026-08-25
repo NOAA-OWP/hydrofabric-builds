@@ -1,0 +1,7 @@
+--
+
+Inspiration and assistance in the creation, and storage of network graphs comes from the following repos. Credit to the authors:
+- https://github.com/DeepGroundwater/ddr/blob/master/engine/adjacency.py
+- https://github.com/CIROH-UA/NGIAB_data_preprocess/blob/main/modules/data_processing/graph_utils.py
+
+--

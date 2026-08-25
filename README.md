@@ -1,109 +1,64 @@
-#### OWP Open Source Project Template Instructions
+# hydrofabric-builds
+Building Hydrofabric &amp; Processing Ancillary Data
 
-1. Create a new project.
-2. [Copy these files into the new project](#installation)
-3. Update the README, replacing the contents below as prescribed.
-4. Add any libraries, assets, or hard dependencies whose source code will be included
-   in the project's repository to the _Exceptions_ section in the [TERMS](TERMS.md).
-  - If no exceptions are needed, remove that section from TERMS.
-5. If working with an existing code base, answer the questions on the [open source checklist](opensource-checklist.md)
-6. Delete these instructions and everything up to the _Project Title_ from the README.
-7. Write some great software and tell people about it.
+<img style="display: block; margin-left: auto; margin-right: auto;" src="docs/img/hydrofabric.png" alt="hydrofabric" width="40%" height="40%"/>
 
-> Keep the README fresh! It's the first thing people see and will make the initial impression.
-
-## Installation
-
-To install all of the template files, run the following script from the root of your project's directory:
-
-```
-bash -c "$(curl -s https://raw.githubusercontent.com/NOAA-OWP/owp-open-source-project-template/open_source_template.sh)"
+### Getting Started
+This repo is managed through [UV](https://docs.astral.sh/uv/getting-started/installation/) and can be installed through:
+```sh
+uv sync
 ```
 
-----
+### Quickstart
+[See here for all steps for downloading data from the RTX EDFS Test Account Bucket](docs/builds/quickstart.md)
 
-# Project Title
+### Development
+To ensure that hydrofabric-builds follows the specified structure, be sure to install the local dev dependencies and run `uv run pre-commit install`
 
-**Description**:  Put a meaningful, short, plain-language description of what
-this project is trying to accomplish and why it matters.
-Describe the problem(s) this project solves.
-Describe how this software can improve the lives of its audience.
+### Documentation
+To build the user guide documentation for Icefabric locally, run the following commands:
+```sh
+uv sync --extra docs
+uv run mkdocs serve -a localhost:8080
+```
+Docs will be spun up at localhost:8080/
 
-Other things to include:
+Additional documentation can be found below for:
+- [Divide Attributes](docs/builds/divide_attributes.md)
+- [Flowpath Attributes](docs/builds/flowpath_attributes.md.md)
+- [POI/Gages](docs/builds/POI_gages_builder.md)
+- [Reservoir Attrubutes](docs/builds/reservoir_attrs.md)
+- [Gage Locations](docs/builds/snap_gages_to_flowpaths.md)
 
-  - **Technology stack**: Indicate the technological nature of the software, including primary programming language(s) and whether the software is intended as standalone or as a module in a framework or other ecosystem.
-  - **Status**:  Alpha, Beta, 1.1, etc. It's OK to write a sentence, too. The goal is to let interested people know where this project is at. This is also a good place to link to the [CHANGELOG](CHANGELOG.md).
-  - **Links to production or demo instances**
-  - Describe what sets this apart from related-projects. Linking to another doc or page is OK if this can't be expressed in a sentence or two.
+#### Proposed Schema
 
+The following schema is the proposed data model for NGWPC hydrofabric datasets produced by this repo.
 
-**Screenshot**: If the software has visual components, place a screenshot after the description; e.g.,
+<img style="display: block; margin-left: auto; margin-right: auto;" src="docs/img/nhf_v0.3.7_schema.png" alt="nhf_v0.3.7_schema.png" width="100%" height="100%"/>
 
-![](https://raw.githubusercontent.com/NOAA-OWP/owp-open-source-project-template/master/doc/Screenshot.png)
+##### Flowpaths FACT Table
 
+The central table (or FACT Table) is `Flowpaths`. Each `flowpath` has a downstream, and upstream `nexus` point, allowing for traversal of a river network through a single table. Additionally, there is a 1:1 relationship between `flowpath` and `divide`.
 
-## Dependencies
+##### NGEN Tables
 
-Describe any dependencies that must be installed for this software to work.
-This includes programming languages, databases or other storage mechanisms, build tools, frameworks, and so forth.
-If specific versions of other software are required, or known not to work, call that out.
+The tables highlighted in green are the infomation needed for lumped modeling to take place. Lumped models require attributes, the shape of the `divide` that is being modeled, and a `nexus` point for flow to be aggregated to.
 
-## Installation
+##### Routing Tables
 
-Detailed instructions on how to install, configure, and get the project running.
-This should be frequently tested to ensure reliability. Alternatively, link to
-a separate [INSTALL](INSTALL.md) document.
+The tables highlighted in blue contain the information needed for routing at a high resolution. T-Route is expected to run at a fine-scale (~300m segments) with many `virtual_flowpaths`. Each virtual flowpath is delineated based on the reference fabric, and there should be a many -> one relationship between `virtual_flowpaths` and `flowpaths`, with some `virtual flowpaths` not being represented in the `flowpaths` table. These non-represented `flowpaths` have the parameter of `routing_segment` set to False, and will have flow estimated through flow-scaling.
 
-## Configuration
+##### Reference Crosswalks
 
-If the software is configurable, describe it in detail, either here or in other documentation to which you link.
+The NGWPC Hydrofabric is build using many reference materials:
+- Reference Flowpaths
+- Reference Reservoirs
+- USGS/ENVCA/CADWR/TXDOT Streamflow Gages
+- NHD+
 
-## Usage
+To ensure `flowpaths` can be mapped to back to the materials that created them, each of the reference materials is mapped to `flowpaths`, `hydrolocations`, and `virtual flowpaths`. The following IDs pairings are used:
 
-Show users how to use the software.
-Be specific.
-Use appropriate formatting when showing code snippets.
-
-## How to test the software
-
-If the software includes automated tests, detail how to run those tests.
-
-## Known issues
-
-Document any known significant shortcomings with the software.
-
-## Getting help
-
-Instruct users how to get help with this software; this might include links to an issue tracker, wiki, mailing list, etc.
-
-**Example**
-
-If you have questions, concerns, bug reports, etc, please file an issue in this repository's Issue Tracker.
-
-## Getting involved
-
-This section should detail why people should get involved and describe key areas you are
-currently focusing on; e.g., trying to get feedback on features, fixing certain bugs, building
-important pieces, etc.
-
-General instructions on _how_ to contribute should be stated with a link to [CONTRIBUTING](CONTRIBUTING.md).
-
-
-----
-
-## Open source licensing info
-
-These links must be included in the final version of your project README (keep this section,
-as is, but remove this sentence):
-
-1. [TERMS](TERMS.md)
-2. [LICENSE](LICENSE)
-
-
-----
-
-## Credits and references
-
-1. Projects that inspired you
-2. Related projects
-3. Books, papers, talks, or other sources that have meaningful impact or influence on this project
+- Reference Flowpaths -> `ref_fp_id`
+- Reference Reservoirs -> `dam_id`
+- USGS/ENVCA/CADWR/TXDOT Streamflow Gages -> `site_no`
+- NHD+ -> `nhd_feature_id`

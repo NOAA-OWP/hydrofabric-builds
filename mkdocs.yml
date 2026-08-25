@@ -1,0 +1,53 @@
+site_name: hydrofabric-builds
+site_description: Building Hydrofabric(s) and processing ancillary data
+repo_url: https://github.com/NGWPC/hydrofabric-builds
+repo_name: NGWPC/hydrofabric-builds
+theme:
+  name: material
+  features:
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.suggest
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - scheme: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.mark
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+
+nav:
+  - Home:
+    - index.md
+  - Builds:
+    - builds/index.md
+    - Irrigation: builds/irrigation.md

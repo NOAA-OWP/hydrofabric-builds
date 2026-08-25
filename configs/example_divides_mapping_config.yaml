@@ -1,0 +1,23 @@
+#--------------------------------------
+# config file to find the overlapping area between divides in reference fabric and unit basins in Merit basins
+#--------------------------------------
+paths:
+  ref_fabric_path: "/Users/farshidrahmani/Farshid/Datasets/reference_fabric/sc_reference_fabric.gpkg"
+  merit_path: "/Users/farshidrahmani/Farshid/Datasets/MERIT_NorthAmerica/cat_pfaf_7_MERIT_Hydro_v07_Basins_v01_bugfix1.shp"
+  out_dir: "/Users/farshidrahmani/Farshid/Datasets/intersections_out"
+
+columns:
+  name1: "divide_id"   # The column's name having divides IDs in reference fabric
+  name2: "COMID"       # The column's name having unit basins IDs in MERIT file
+
+crs:
+  equal_area: "EPSG:5070"     # Equal-area CRS
+
+  g2_assume: "EPSG:4326"     # Merit basins assumed CRS
+
+chunking:
+  chunk_size: 50000    # number of g1 features per chunk
+
+checkpoint:
+  checkpoint_name: "nested_checkpoint.pkl"
+  final_name: "nested_final.pkl"
