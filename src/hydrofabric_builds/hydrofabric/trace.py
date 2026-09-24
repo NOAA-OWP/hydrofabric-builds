@@ -503,9 +503,9 @@ def _trace_single_flowpath_attributes(
             "fp_id": fp_id,
             "area_sqkm": fp_lookup[fp_id]["area_sqkm"],
             "length_km": fp_lookup[fp_id]["length_km"],
-            "total_da_sqkm": 0.0,
+            "total_da_sqkm": None,
             "mainstem_lp": None,
-            "path_length": 0.0,
+            "path_length": None,
             "dn_hydroseq": None,
             "hydroseq": None,
             "streamorder": None,
@@ -519,100 +519,7 @@ def _trace_single_flowpath_attributes(
     except rx.DAGHasCycle as e:
         raise AssertionError(f"Basin {outlet_fp_id} contains cycles") from e
 
-    # PASS 1: Traverse from OUTLET to ANCESTORS (reverse topo order)
-    current_mainstem_id = id_offset
-    current_hydroseq = hydroseq_offset
-
-    # Initialize outlet
-    basin_graph[outlet_idx]["path_length"] = 0.0
-    basin_graph[outlet_idx]["dn_hydroseq"] = 0
-    basin_graph[outlet_idx]["hydroseq"] = current_hydroseq
-    current_hydroseq += 1
-
-    # Calculate path lengths and hydroseq (reverse topo order)
-    for node_idx in reversed(topo_order):
-        if node_idx == outlet_idx:
-            continue
-
-        # Assign hydroseq (increases going upstream)
-        basin_graph[node_idx]["hydroseq"] = current_hydroseq
-        current_hydroseq += 1
-
-        out_edges = basin_graph.out_edges(node_idx)
-
-        if out_edges:
-            downstream_nodes = [tgt_idx for _, tgt_idx, _ in out_edges]
-
-            if downstream_nodes:
-                downstream_idx = max(downstream_nodes, key=lambda idx: basin_graph[idx]["path_length"])
-                basin_graph[node_idx]["path_length"] = (
-                    basin_graph[downstream_idx]["path_length"] + basin_graph[downstream_idx]["length_km"]
-                )
-
-    # Trace main mainstem (longest path from outlet to headwater)
-    current_idx = outlet_idx
-    mainstem_nodes = []
-
-    while True:
-        mainstem_nodes.append(current_idx)
-        basin_graph[current_idx]["mainstem_lp"] = current_mainstem_id
-
-        in_edges = list(basin_graph.in_edges(current_idx))
-
-        if not in_edges:
-            break
-
-        upstream_candidates = [src_idx for src_idx, _, _ in in_edges]
-
-        if not upstream_candidates:
-            break
-
-        upstream_idx = max(
-            upstream_candidates,
-            key=lambda idx: (basin_graph[idx]["path_length"], basin_graph[idx]["total_da_sqkm"]),
-        )
-        current_idx = upstream_idx
-
-    # Assign tributary mainstems
-    tributary_offset = current_mainstem_id + 1
-    processed = set(mainstem_nodes)
-
-    for node_idx in basin_graph.node_indices():
-        if node_idx not in processed:
-            tributary_id = tributary_offset
-            tributary_offset += 1
-
-            trib_current = node_idx
-            while trib_current not in processed:
-                basin_graph[trib_current]["mainstem_lp"] = tributary_id
-                processed.add(trib_current)
-
-                in_edges = list(basin_graph.in_edges(trib_current))
-                upstream_in_basin = [src_idx for src_idx, _, _ in in_edges]
-
-                if not upstream_in_basin:
-                    break
-
-                trib_current = max(
-                    upstream_in_basin,
-                    key=lambda idx: (basin_graph[idx]["path_length"], basin_graph[idx]["total_da_sqkm"]),
-                )
-
-    # Assign dn_hydroseq based on graph edges (now that hydroseq is calculated)
-    for node_idx in basin_graph.node_indices():
-        if node_idx == outlet_idx:
-            continue
-
-        out_edges = basin_graph.out_edges(node_idx)
-        downstream_nodes = [tgt_idx for _, tgt_idx, _ in out_edges]
-
-        if downstream_nodes:
-            downstream_idx = downstream_nodes[0]
-            basin_graph[node_idx]["dn_hydroseq"] = basin_graph[downstream_idx]["hydroseq"]
-        else:
-            basin_graph[node_idx]["dn_hydroseq"] = 0
-
-    # PASS 2: Traverse from ancestors to OUTLET (forward topo order)
+    # PASS 1: Traverse from ancestors to OUTLET (forward topo order)
     for node_idx in topo_order:
         in_edges = basin_graph.in_edges(node_idx)
 
@@ -634,6 +541,72 @@ def _trace_single_flowpath_attributes(
                 basin_graph[node_idx]["streamorder"] = max_order + 1
             else:
                 basin_graph[node_idx]["streamorder"] = max_order
+
+    # PASS 2: Traverse from OUTLET to ANCESTORS (reverse topo order)
+    current_mainstem_id = id_offset
+    current_hydroseq = hydroseq_offset
+    processed: set[int] = set()
+
+    # Initialize outlet
+    basin_graph[outlet_idx]["path_length"] = 0.0
+    basin_graph[outlet_idx]["dn_hydroseq"] = 0
+    basin_graph[outlet_idx]["hydroseq"] = current_hydroseq
+    basin_graph[outlet_idx]["flowpath_toid"] = "0"
+    basin_graph[outlet_idx]["mainstem_lp"] = current_mainstem_id
+    current_hydroseq += 1
+    current_mainstem_id += 1
+
+    # Calculate path lengths and hydroseq (reverse topo order)
+    for node_idx in reversed(topo_order):
+        if node_idx == outlet_idx:
+            continue
+
+        # Assign hydroseq (increases going upstream)
+        basin_graph[node_idx]["hydroseq"] = current_hydroseq
+        current_hydroseq += 1
+
+        # get the downstream node; if multiple downstream nodes, get the one with longest path_length (dist to outlet)
+        downstream_nodes = [tgt_idx for _, tgt_idx, _ in basin_graph.out_edges(node_idx)]
+        downstream_idx = max(
+            downstream_nodes,
+            key=lambda idx: basin_graph[idx]["path_length"]
+            if basin_graph[idx]["path_length"] is not None
+            else -1,
+        )
+        if basin_graph[downstream_idx]["hydroseq"] is None:
+            raise ValueError(
+                f"Downstream node {downstream_idx} hydroseq is None when processing node {node_idx}. This indicates an error in the topological sorting or traversal logic."
+            )
+
+        # downstream connection
+        basin_graph[node_idx]["dn_hydroseq"] = basin_graph[downstream_idx]["hydroseq"]
+
+        # path_length to outlet
+        basin_graph[node_idx]["path_length"] = (
+            basin_graph[downstream_idx]["path_length"] + basin_graph[downstream_idx]["length_km"]
+        )
+
+        # update mainstem_lp for current node and other branches if this node is a confluence
+        if downstream_idx in processed:
+            continue
+        mainstem_lp = basin_graph[downstream_idx]["mainstem_lp"]
+        upstream_nodes = [src_idx for src_idx, _, _ in basin_graph.in_edges(downstream_idx)]
+        if len(upstream_nodes) > 1:  # confluence
+            # mainstem is the upstream node with highest stream order, then by largest total_da_sqkm as tiebreaker
+            mainstem_node = max(
+                upstream_nodes,
+                key=lambda idx: (basin_graph[idx]["streamorder"], basin_graph[idx]["total_da_sqkm"]),
+            )
+        else:  # no confluence, just one upstream node
+            mainstem_node = upstream_nodes[0]
+            assert mainstem_node == node_idx, "If only one upstream node, it should be the current node"
+        for up_idx in upstream_nodes:
+            if up_idx == mainstem_node:
+                basin_graph[up_idx]["mainstem_lp"] = mainstem_lp
+            else:
+                basin_graph[up_idx]["mainstem_lp"] = current_mainstem_id
+                current_mainstem_id += 1
+        processed.add(downstream_idx)
 
     # Extract results from graph into lists
     fp_ids = []
@@ -663,7 +636,8 @@ def _trace_single_flowpath_attributes(
             "dn_hydroseq": dn_hydroseqs,
             "hydroseq": hydroseqs,
             "stream_order": streamorders,
+            "terminalpa": hydroseq_offset,
         }
     )
 
-    return traced_df, tributary_offset + 1, current_hydroseq
+    return traced_df, current_mainstem_id, current_hydroseq

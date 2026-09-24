@@ -308,3 +308,42 @@ def run_assignment(
 
     result = pd.concat(parts).loc[out.index]
     return gpd.GeoDataFrame(result, geometry="geometry", crs=gages.crs)
+
+
+def override_flowpath_id(gages: gpd.GeoDataFrame, override_fp: pd.DataFrame) -> gpd.GeoDataFrame:
+    """Replace algorithmically generated flowpath ID with hardcoded flowpath ID in file.
+
+    CSV should have columns `site_no`, `fp_id`, `virtual_fp_id`
+
+    Parameters
+    ----------
+    gages : gpd.GeoDataFrame
+        Master table
+    override_fp : pd.DataFrame
+        Flowpaths to override
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        Updated gages table
+    """
+    if not pd.Series(["site_no", "fp_id", "virtual_fp_id"]).isin(override_fp.columns).all():
+        logger.warning(
+            "Column names should be `site_no` and `fp_id` for hardcoding flowpaths with gages. "
+            " Skipping flowpath update."
+        )
+
+        return gages
+
+    updated = 0
+    for _i, row in override_fp.iterrows():
+        mask = gages["site_no"] == row["site_no"]
+        if mask.any():
+            gages.loc[mask, "fp_id"] = row["fp_id"]
+            gages.loc[mask, "virtual_fp_id"] = row["virtual_fp_id"]
+            logger.info(f"Overriding fp_id and virtual_fp_id for gage {row['site_no']}")
+            updated += 1
+
+    logger.info(f"{updated} gages override flowpaths changed")
+
+    return gages

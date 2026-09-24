@@ -1,0 +1,30 @@
+{
+  "description": "Lakes: DEM inputs for Lakes",
+  "properties": {
+    "path": {
+      "default": "input/COP90_DEM_SuperCONUS.tif",
+      "description": "Source path. LakesConfig will inject preceding input path.",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "nodata": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Nodata value. Let rasterio infer if null",
+      "title": "Nodata"
+    }
+  },
+  "title": "LakesDEMInputs",
+  "type": "object"
+}

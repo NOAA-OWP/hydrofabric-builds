@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "FPCrosswalkOutputs": {
+      "description": "fp_crosswalk: final matches table inside a GPKG (no geometry is fine)",
+      "properties": {
+        "path": {
+          "default": "data/fp_crosswalk_matches.parquet",
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "title": "FPCrosswalkOutputs",
+      "type": "object"
+    },
+    "FPCrosswalkReference": {
+      "description": "fp_crosswalk: reference (file1) network",
+      "properties": {
+        "id_col": {
+          "default": "flowpath_id",
+          "title": "Id Col",
+          "type": "string"
+        }
+      },
+      "title": "FPCrosswalkReference",
+      "type": "object"
+    },
+    "FPCrosswalkTarget": {
+      "description": "fp_crosswalk: target (file2) network",
+      "properties": {
+        "path": {
+          "default": "data/nwm_flows.gpkg",
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "layer": {
+          "default": "nwm_streams",
+          "title": "Layer",
+          "type": "string"
+        },
+        "id_col": {
+          "default": "ID",
+          "title": "Id Col",
+          "type": "string"
+        }
+      },
+      "title": "FPCrosswalkTarget",
+      "type": "object"
+    }
+  },
+  "description": "Config class for the `fp_crosswalk:` block in the YAML.",
+  "properties": {
+    "reference": {
+      "$ref": "#/$defs/FPCrosswalkReference"
+    },
+    "target": {
+      "$ref": "#/$defs/FPCrosswalkTarget"
+    },
+    "outputs": {
+      "$ref": "#/$defs/FPCrosswalkOutputs"
+    },
+    "search_radius_m": {
+      "default": 15.0,
+      "title": "Search Radius M",
+      "type": "number"
+    },
+    "percent_inside_min": {
+      "default": 0.005,
+      "title": "Percent Inside Min",
+      "type": "number"
+    },
+    "node_snap_tol_m": {
+      "default": 0.01,
+      "title": "Node Snap Tol M",
+      "type": "number"
+    },
+    "endpoint_buffer_m": {
+      "default": 20.0,
+      "title": "Endpoint Buffer M",
+      "type": "number"
+    },
+    "parallel": {
+      "default": true,
+      "title": "Parallel",
+      "type": "boolean"
+    },
+    "n_jobs": {
+      "default": 3,
+      "title": "N Jobs",
+      "type": "integer"
+    },
+    "parallel_chunksize": {
+      "default": 200,
+      "title": "Parallel Chunksize",
+      "type": "integer"
+    },
+    "path": {
+      "default": "/data/nhd_crosswalk.parquet",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    }
+  },
+  "title": "FPCrosswalkConfig",
+  "type": "object"
+}

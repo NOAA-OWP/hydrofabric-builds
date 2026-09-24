@@ -1,0 +1,37 @@
+{
+  "description": "Mapping of reservoir DA types to integer code",
+  "properties": {
+    "level_pool": {
+      "default": 1,
+      "title": "Level Pool",
+      "type": "integer"
+    },
+    "usgs_persistence": {
+      "default": 2,
+      "title": "Usgs Persistence",
+      "type": "integer"
+    },
+    "usace_persistence": {
+      "default": 3,
+      "title": "Usace Persistence",
+      "type": "integer"
+    },
+    "usbr_persistence": {
+      "default": 7,
+      "title": "Usbr Persistence",
+      "type": "integer"
+    },
+    "rfc_forecast": {
+      "default": 4,
+      "title": "Rfc Forecast",
+      "type": "integer"
+    },
+    "great_lakes": {
+      "default": 6,
+      "title": "Great Lakes",
+      "type": "integer"
+    }
+  },
+  "title": "ResDAMapping",
+  "type": "object"
+}

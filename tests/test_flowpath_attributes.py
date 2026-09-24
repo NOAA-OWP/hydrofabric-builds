@@ -111,7 +111,7 @@ def flowpath_attributes_dem_values(
 
     gdf["geometry"] = gdf["geometry"].line_merge()
     gdf["mean_elevation"] = [(2 + 3) / 2, (1 + 3) / 2, (1 + 1) / 2, (2 + 2 + 2 + 3) / 4]
-    gdf["slope"] = [abs((3 - 2) / 3), abs((1 - 3) / 6.082763), 1e-4, abs((3 - 2) / 2.5)]  # line 3 is slope 0
+    gdf["slope"] = [abs((3 - 2) / 3), abs((1 - 3) / 6.082763), 1e-5, abs((3 - 2) / 2.692582403567252)]
 
     return gdf
 
@@ -256,7 +256,7 @@ def flowpath_attributes_output() -> gpd.GeoDataFrame:
         "stream_order": [1, 2, 3, 3],
         "total_da_sqkm": [1, 2, 3, 4],
         "mean_elevation": [(2 + 3) / 2, (1 + 3) / 2, (1 + 1) / 2, (2 + 2 + 2 + 3) / 4],
-        "slope": [abs((3 - 2) / 3), abs((1 - 3) / 6.082763), 1e-4, abs((3 - 2) / 2.5)],
+        "slope": [abs((3 - 2) / 3), abs((1 - 3) / 6.082763), 1e-5, abs((3 - 2) / 2.692582403567252)],
         "n": [0.096, 0.076, 0.060, 0.060],
         "r": [None, None, None, None],
         "y": [None, None, None, None],

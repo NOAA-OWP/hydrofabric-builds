@@ -356,15 +356,9 @@ class DivideAttributeConfig(BaseModel):
     agg_type: AggTypeEnum = Field(description="Zonal stats aggregation type")
     field_name: str = Field(description="Output field name for divide attribute")
     file_name: Path = Field(description="File path of attribute raster")
-    file_name2: Path | None = Field(description="Optional file path for a second file", default=None)
-    file_name3: Path | None = Field(description="Optional file path for a third file", default=None)
     tmp: Path = Field(
         description="Temp file path for parquet",
         default_factory=lambda data: Path("/tmp/divide-attributes") / f"tmp_{data['field_name']}.parquet",
-    )
-    tmp_raster: Path = Field(
-        description="Temp file path for groundwater raster",
-        default=Path("/tmp/divide-attributes") / "tmp_raster_file.tif",
     )
 
     @model_validator(mode="after")
@@ -377,10 +371,6 @@ class DivideAttributeConfig(BaseModel):
     def full_file_name(self: Any) -> Self:  # type: ignore[misc,type-var]
         """Join the root data dir to the file name"""
         self.file_name = self.data_dir / self.file_name
-        if self.file_name2:
-            self.file_name2 = self.data_dir / self.file_name2
-        if self.file_name3:
-            self.file_name3 = self.data_dir / self.file_name3
         return self
 
 
@@ -637,6 +627,15 @@ class GageInput(BaseModel):
     x_col_name: str | None = None
     y_col_name: str | None = None
     area_col_name: str = "area_sqkm"
+    status_col_name: str | None = None
+
+
+class NWMRFCInput(BaseModel):
+    """NWM reservoir index file for retaining RFC and USACE gages. USACE IDs are found in NID."""
+
+    path: Path = Path("rfc/reservoir_index_AnA.nc")
+    rfc_id_col: str = "rfc_gage_id"
+    usace_id_col: str = "usace_gage_id"
 
 
 class GagesInputs(BaseModel):
@@ -661,7 +660,50 @@ class GagesInputs(BaseModel):
         default_factory=lambda: GageInput(path=Path("nwm_calib/nwm_calib_gages_07112025.csv"))
     )
     routelink: GageInput = Field(
-        default_factory=lambda: GageInput(path=Path("RouteLink_CONUS_EPSG4326.gpkg"))
+        default_factory=lambda: GageInput(path=Path("RouteLink_CONUS_EPSG4326.gpkg"), id_col_name="gages")
+    )
+    rfc: GageInput = Field(
+        default_factory=lambda: GageInput(
+            path=Path("rfc/nwps_all_gauges_report.csv"),
+            id_col_name="nws shef id",
+            x_col_name="longitude",
+            y_col_name="latitude",
+            status_col_name="forecast status",
+        ),
+        description="Table of active NWS gages. Retrieved from https://water.noaa.gov/about/data-and-web-services-catalog on 6/15/26",
+    )
+    nid: GageInput = Field(
+        default_factory=lambda: GageInput(
+            path=Path(
+                "rfc/NID2019_U.csv",
+            ),
+            id_col_name="NIDID",
+            x_col_name="LONGITUDE",
+            y_col_name="LATITUDE",
+        )
+    )
+    nwm_rfc: NWMRFCInput = Field(
+        default=NWMRFCInput(), description="An NWM v3 reservoid index file with RFC gages to retain"
+    )
+    adhoc_lakes: GageInput = Field(
+        default_factory=lambda: GageInput(
+            path=Path("rfc/adhoc_lakes.gpkg"), id_col_name="locationId", x_col_name="Lon", y_col_name="Lat"
+        ),
+        description="Adhoc lakes from reference waterbodies",
+    )
+    canada_great_lakes: bool = Field(
+        default=False,
+        description="Flag to pull Lake Erie and Lake Ontario Canadian gages from GreatLakesMapping class defined in Lakes",
+    )
+    usbr: GageInput = Field(
+        default_factory=lambda: GageInput(
+            path=Path("other/usbr.gpkg"), id_col_name="locId", x_col_name="Lon", y_col_name="Lat"
+        ),
+        description="USBR lakes",
+    )
+    usace: GageInput = Field(
+        default_factory=lambda: GageInput(path=Path("other/usace_crosswalk.gpkg"), id_col_name="location"),
+        description="USACE gages/reservoirs",
     )
 
 
@@ -710,6 +752,10 @@ class AssignFPConfig(BaseModel):
     max_workers: int | None = None
     USGS_NLDI_crs: str = "EPSG:4326"
     work_crs: str = "EPSG:5070"
+    override_fp_path: Path | None = Field(
+        default=None,
+        description="A csv with columns `site_no`, `fp_id`, and `virtual_fp_id` to override algorithmically chosen flowpath associations",
+    )
 
 
 # --- your top-level gages config now has defaults ---
@@ -750,34 +796,12 @@ class GagesConfig(BaseModel):
         return self
 
 
-# RFC-DA Configs
-class ResNWMLakesInputs(BaseModel):
-    """NWM preparation inputs to generate RFC-DA"""
-
-    prep_nwm_lakes: bool = Field(
-        default=False,
-        description="Prepare NWM/HF 2.2 lakes to be used in RFCDA. Generally, this file will be available on s3 and synced.",
-    )
-    input_path: Path = Field(
-        default=Path("source_files/nwm_patch_conus_nextgen.gpkg"),
-        description="Source path if preparing NWM lakes from scratch. When using defaults, WaterbodiesConfig will inject preceding input path.",
-    )
-    layer: str = Field(default="lakes")
-    buffer_size_m: int | float = Field(
-        default=500, description="Buffer size for waterbodies when matching to lakes"
-    )
-    output_path: Path = Field(
-        default=Path("source_files/nwm_lakes.gpkg"),
-        description="Output path if creating or file to use in pipeline if not creating. When using defaults, WaterbodiesConfig will inject preceding input path.",
-    )
-    lakes_keep: list[int] = Field(default=[], description="List of lake_id's to keep in RFCDA")
-
-
-class ResNIDInputs(BaseModel):
-    """NID inputs to generate RFC-DA"""
+### Lakes ###
+class NIDInputs(BaseModel):
+    """Lakes: National Inventory of Dams (NID) inputs to improve hydaulic paramters. NID is available for Reference Reservoirs data."""
 
     path: Path = Field(
-        default="source_files/NID2019_U.csv",
+        default="input/NID2019_U.csv",
         description="Source path. When using defaults, WaterbodiesConfig will inject preceding input path.",
     )
     src_crs: str | None = Field(default="EPSG:4326", description="Source CRS")
@@ -787,28 +811,29 @@ class ResNIDInputs(BaseModel):
     )
 
 
-class ResReferenceWaterbodiesInputs(BaseModel):
-    """Reference waterbodies inputs to generate RFC-DA"""
+class LakesDEMInputs(BaseModel):
+    """Lakes: DEM inputs for Lakes"""
 
     path: Path = Field(
-        default="reference_reservoirs/reference_waterbodies.gpkg",
-        description="Source path. When using defaults, WaterbodiesConfig will inject preceding input path.",
+        default="input/COP90_DEM_SuperCONUS.tif",
+        description="Source path. LakesConfig will inject preceding input path.",
     )
-    layer: str = Field(default="reference_waterbodies", description="GPKG layer")
-    src_crs: str | None = Field(None, description="Source CRS")
-    output_crs: str = Field(default="EPSG:5070", description="Output CRS")
-    id_col: str = Field(default="comid", description="Reference waterbodies ID column")
+    nodata: int | float | None = Field(None, description="Nodata value. Let rasterio infer if null")
 
 
-class ResReferenceReservoirsInputs(BaseModel):
-    """Reference reservoirs inputs to generate RFC-DA"""
+class ReferenceReservoirsInput(BaseModel):
+    """Lakes: Reference Reservoirs is a point dataset of dams including hydraulic parameters from the National Inventory of Dams (NID)."""
 
     path: Path = Field(
-        default="reference_reservoirs/reference-reservoirs-v1.gpkg",
-        description="Source path. When using defaults, WaterbodiesConfig will inject preceding input path.",
+        default=Path("input/reference-reservoirs-v1.gpkg"),
+        description="Source path. When using defaults, LakesConfig will inject preceding input path.",
     )
     layer: str = Field(default="reference-reservoirs-v1", description="GPKG layer")
-    src_crs: str | None = Field(None, description="Source CRS")
+    run: bool = Field(
+        default=True,
+        description="Flag to run reference reservoirs input. Must be set to false if file is not present.",
+    )
+    src_crs: str | None = Field(default=None, description="Source CRS")
     output_crs: str = Field(default="EPSG:5070", description="Output CRS")
     distance_to_fp_col: str = Field(default="distance_to_fp_m", description="Distance to flowpath (m) column")
     wb_area_col: str = Field(default="wb_areasqkm", description="Area (km2) column")
@@ -825,124 +850,62 @@ class ResReferenceReservoirsInputs(BaseModel):
     )
 
 
-class ResOSMInputs(BaseModel):
-    """OSM inputs to generate RFC-DA"""
+class NWMLakeInput(BaseModel):
+    """Lakes: NWM Lakes is a polygon dataset with COMID. This is the operational lakes layer provided by OWP."""
 
     path: Path = Field(
-        default="source_files/osm_dams_all.gpkg",
-        description="Source path. When using defaults, WaterbodiesConfig will inject preceding input path.",
+        default=Path("input/nwm_lakes.gpkg"),
+        description="Source path. LakesConfig will inject preceding input path.",
     )
-    layer: str = Field(default="osm_dams_all", description="GPKG layer")
-    filter_col: str = Field(
-        default="waterway", description="column's name which has dam and non-dam infrastructures"
+    buffered_path: Path = Field(
+        default=Path("input/nwm_lakes_sconus_input_500m_buffer.gpkg"),
+        description="Source path, with polygons buffered out (for validating duplicate lake points). LakesConfig will inject preceding input path.",
     )
-    filter_val: str = Field(default="dam", description="value used to filter column")
-
-
-class ResDEMInputs(BaseModel):
-    """DEM inputs to generate RFC-DA"""
-
-    path: Path = Field(
-        default="source_files/USGS_Seamless_DEM_13.vrt",
-        description="Source path. When using defaults, WaterbodiesConfig will inject preceding input path.",
+    layer: str = Field(default="lakes", description="GPKG layer")
+    fp_associated_path: Path = Field(
+        default=Path("output/fp_associated.gpkg"),
+        description="A temporary layer to read lakes from where flowpaths have been associated and attributes joined. Skips flowpath association.",
     )
-    prefer_crs_of_dem: bool = Field(
-        default=True, description="Reproject polygons to DEM CRS before sampling of True"
+    run: bool = Field(
+        default=True, description="Flag to run NWM lakes input. Must be set to false if file is not present."
     )
-    band: int = Field(default=1, description="Band of raster as opened in rasterio")
-    nodata: int | float | None = Field(None, description="Nodata value. Let rasterio infer if null")
-
-
-class ResRules(BaseModel):
-    """Rules for generating RFC-DA"""
-
-    max_waterbody_nearest_dist_m: float = Field(
-        default=1000.0, description="Max waterbdody nearest distance (m) for nearest WB ↔ dam selection"
+    improve_placement_ref_res: bool = Field(
+        default=True, description="Flag to use reference reservoirs to improve placement of lakes."
     )
-    min_area_sqkm: float = Field(
-        default=0.2,
-        description="Removes waterbodies smaller than this threshold. Use 0 to remove none.",
+    improve_placement_path: Path = Field(
+        default=Path("output/fp_improved placement.gpkg"),
+        description="A temporary layer to read lakes from where flowpaths have been associated, attributes joined, and reference reservoirs folded in to improve placement. Skips reference reservoirs folding.",
     )
-
-
-class WaterbodiesConfig(BaseModel):
-    """Config for waterbodies. Includes RFC-DA configs."""
-
-    input_dir: Path = Field(
-        default=here() / Path("data/reservoirs"),
-        description="Input data directory. For defaults, this will be prepended to datasets.",
+    use_cached_improve_placement: bool = Field(
+        default=False,
+        description="Use the cached layer stored at `improve_placement_path` regardless of whether the process is requested to run.",
     )
-    output_dir: Path = Field(
-        default=here() / Path("data/reservoirs/output"),
-        description="Output directory. For defaults, will be prepended to output RFCDA name",
-    )
-    rfcda_output_name: str = Field(default="rfc-da-hydraulics-v1.gpkg", description="Output gpkg name")
-    rfcda_file: Path = Field(
-        default_factory=lambda data: data["output_dir"] / data["rfcda_output_name"],
-        description="Full file path. By default will concatenate output dir and file name",
-    )
-    default_src_crs: str = Field(default="EPSG:4326", description="Default source CRS")
-    work_crs: str = Field(
-        default="EPSG:5070",
-        description="CRS for projected ops, distances, buffers. area-equal crs for SuperCONUS",
-    )
-
-    nid: ResNIDInputs = Field(default=ResNIDInputs(), description="NID config")
-    refwb: ResReferenceWaterbodiesInputs = Field(
-        default=ResReferenceWaterbodiesInputs(), description="Reference waterbodies config"
-    )
-    refres: ResReferenceReservoirsInputs = Field(
-        default=ResReferenceReservoirsInputs(), description="Reference reservoirs configs"
-    )
-    osm: ResOSMInputs = Field(default=ResOSMInputs(), description="OSM configs")
-    dem: ResDEMInputs = Field(default=ResDEMInputs(), description="DEM configs")
-    nwm_lakes: ResNWMLakesInputs = Field(
-        default=ResNWMLakesInputs(),
-        description="NWM Lakes configuration. Includes if data prep should be run.",
-    )
-    rules: ResRules = Field(default=ResRules(), description="Rules")
-
-    @model_validator(mode="after")
-    def inject_dirs(self: Any) -> Self:  # type: ignore[misc,type-var]
-        """Inject input directories into each input config path"""
-        self.nid.path = self.input_dir / self.nid.path
-        self.osm.path = self.input_dir / self.osm.path
-        self.refwb.path = self.input_dir / self.refwb.path
-        self.refres.path = self.input_dir / self.refres.path
-        self.dem.path = self.input_dir / self.dem.path
-        self.nwm_lakes.input_path = self.input_dir / self.nwm_lakes.input_path
-        self.nwm_lakes.output_path = self.input_dir / self.nwm_lakes.output_path
-
-        return self
-
-
-class LakesConfig(BaseModel):
-    """Config for NWM Lakes"""
-
-    input_path: Path = Field(
-        default=here() / "data/lakes/nwm_lakes.gpkg", description="File name of source lakes"
-    )
-    input_layer: str | None = Field(
-        default=None, description="Layer name of lakes if input file is a GPKG with mutliple layers"
-    )
-    processed_path: Path = Field(
-        default=here() / "data/lakes/nwm_lakes_process.gpkg",
-        description="File name of source waterbodies with flowpath associations and hydraulics",
-    )
-    associate_flowpaths: bool = Field(
-        default=False, description="Flag to associate waterbodies with reference flowpaths if True"
-    )
+    associate_flowpaths: bool = Field(default=True, description="Flag to run flowpath association")
     flowpath_association_method: str = Field(
-        default="point", description="Specify the method used to associate flowpaths"
+        default="polygon_outlet",
+        description="Type of flowpath association. Options are `polygon_outlet` or `nearest_point`",
     )
-    populate_hydaulics: bool = Field(default=False, description="Flag to populate hydraulics fields if True")
-    id_field: str = Field(default="lake_id", description="ID field in input lakes file")
-    search_radius_m: float | int = Field(
-        default=25000, description="Radius in meters to buffer points for nearest flowpath method"
+    search_radius_m: float = Field(
+        default=1000.0, description="Distance from flowpath to search when associating flowpaths with points."
     )
-    min_preferred_intersection_len_m: float = Field(
-        default=10.0,
-        description="If associated FP intersection with lake is below this threshold, we will try to look for a better candidate",
+    max_refres_search_distance_m: float = Field(
+        default=500.0,
+        description="Distance between NWM lake and reference reservoirs used when improving NWM lake placement.",
+    )
+    intersection_length_min_m: float = Field(
+        default=3.0,
+        description="Minimum prefered intersection lenght when associating polygons with flowpaths. If the flowpath intersection is extremely short, it can sometimes be almost entirely on a long downstream flowpath.",
+    )
+    id_field: str = Field(default="newID", description="ID field for NWM lakes input")
+    attrib_src_path: Path | None = Field(
+        default=None,
+        description="Source file for joining attributes from another file. It will be skipped if null.",
+    )
+    attrib_src_layer: str | None = Field(
+        default=None, description="Source file layer for importing attributes"
+    )
+    attrib_src_key: str = Field(
+        default="lake_id", description="Source file key to match when importing attributes"
     )
     fields: list[str] = Field(
         default=[
@@ -964,15 +927,414 @@ class LakesConfig(BaseModel):
             "reservoir_index_Medium_Range",
             "reservoir_index_Short_Range",
         ],
-        description="Fields to retain in final layer. IDs and geometry will be kept by default.",
+        description="Fields to retain from NWM lakes data. IDs and geometry will be kept by default.",
     )
-    attrib_src_path: Path | None = Field(default=None, description="Source file for importing attributes")
+
+
+class RefWaterbodyInput(BaseModel):
+    """Lakes: Reference Waterbodies is a polygon dataset with COMID. Reference waterbodies will be used for Adhoc Lakes that are only found in Reference Waterbodies. The entire Reference Waterbodies file is not run."""
+
+    path: Path = Field(
+        default=Path("input/reference_waterbodies.gpkg"),
+        description="Source path. LakesConfig will inject preceding input path.",
+    )
+    run: bool = Field(
+        default=True,
+        description="Flag to run Reference Waterbodies input. Must be set to false if file is not present.",
+    )
+    fp_associated_path: Path = Field(
+        default=Path("input/refwb_tmp.gpkg"),
+        description="A temporary layer to read waterbodies from where flowpaths have been associated and attributes joined. Skips flowpath association.",
+    )
+    associate_flowpaths: bool = Field(default=True, description="Flag to run flowpath association")
+    flowpath_association_method: str = Field(
+        default="polygon_outlet",
+        description="Type of flowpath association. Options are `polygon_outlet` or `nearest_point`",
+    )
+    search_radius_m: float = Field(
+        default=1000.0, description="Distance from flowpath to search when associating flowpaths."
+    )
+    id_field: str = Field(default="comid", description="ID field for reference waterbodies")
+    output_id_field: str = Field(
+        default="lake_id", description="ID field to change name to for reference waterbodies"
+    )
+    intersection_length_min_m: float = Field(
+        default=3.0,
+        description="Minimum prefered intersection length when associating polygons with flowpaths. If the flowpath intersection is extremely short, it can sometimes be almost entirely on a long downstream flowpath.",
+    )
+    attrib_src_path: Path | None = Field(
+        default=None,
+        description="Source file for joining attributes from another file. It will be skipped if null.",
+    )
     attrib_src_layer: str | None = Field(
         default=None, description="Source file layer for importing attributes"
     )
     attrib_src_key: str = Field(
-        default="lake_id", description="Source file key to match when importing attributes"
+        default=None, description="Source file key to match when importing attributes"
     )
+
+
+class AdhocLakeInput(BaseModel):
+    """Lakes: Adhoc lakes have been mapped to COMID, site_no (gage), and dam_id (reference reservoirs) when possible. Adhoc lakes that are only in reference waterbodies are flagged to force inclusion."""
+
+    path: Path = Field(
+        default=Path("input/adhoc_lakes.gpkg"),
+        description="Source path. LakesConfig will inject preceding input path.",
+    )
+    layer: str = "adhoc_lakes"
+    run: bool = Field(
+        default=True, description="Flag to run Adhoc Lake input. Must be set to false if file is not present."
+    )
+    ref_wb_field: str = Field(
+        default="ref_waterbodies_only",
+        description="Field in the adhoc lakes table that flags if a lake is only in the reference waterbodies dataset (not in NWM lakes)",
+    )
+
+
+class USBRLakeInput(BaseModel):
+    """Lakes: USBR lakes are mapped to COMID/lake_id. Add USBR lakes from reference reservoirs when not included in nwm lakes."""
+
+    path: Path = Field(
+        default=Path("input/usbr_lake_crosswalk.gpkg"),
+        description="Source path. LakesConfig will inject preceding input path.",
+    )
+    layer: str = "usbr_lake_crosswalk"
+    run: bool = Field(
+        default=True, description="Flag to run USBR Lake input. Must be set to false if file is not present."
+    )
+    ref_wb_field: str = Field(
+        default="ref_wb_lake",
+        description="Field in the USBR table that flags if a lake is only in the reference waterbodies dataset (not in NWM lakes)",
+    )
+
+
+class GreatLake(BaseModel):
+    """Defines parameters about a Great Lake"""
+
+    lake_id: str = Field(description="lake_id/NHD 2.2 COMID for Great Lake")
+    fp_id: float = Field(description="NHF flowpath ID for Great Lake")
+    virtual_fp_id: float = Field(description="NHF virtual flowpath ID for Great Lake")
+    site_no: str = Field(description="Gage ID / site_no for Great Lake")
+    lat: float | None = Field(default=None, description="Add a manual latitude if needed to place gage")
+    lon: float | None = Field(default=None, description="Add a manual longitude if needed to place gage")
+    data_source: str | None = Field(default=None, description="Data source of gage")
+
+
+class GreatLakesMapping(BaseModel):
+    """All Great Lakes mappings"""
+
+    superior: GreatLake = GreatLake(
+        lake_id="4800002",
+        fp_id=1278348162056612,
+        virtual_fp_id=1278346877373953,
+        site_no="04127885",
+        data_source="USGS",
+    )
+    mi_huron: GreatLake = GreatLake(
+        lake_id="4800004",
+        fp_id=1276364270499315,
+        virtual_fp_id=1276364270423160,
+        site_no="04159130",
+        data_source="USGS",
+    )
+    erie: GreatLake = GreatLake(
+        lake_id="4800006",
+        fp_id=1286192735893685,
+        virtual_fp_id=1286154743979494,
+        site_no="02HA013",
+        lat=42.93028,
+        lon=-78.91417,
+        data_source="Environment Canada: https://wateroffice.ec.gc.ca/report/real_time_e.html?stn=02HA013",
+    )
+    ontario: GreatLake = GreatLake(
+        lake_id="4800007",
+        fp_id=1287248237297035,
+        virtual_fp_id=1287248166320950,
+        site_no="IJC",
+        lat=45.00639,
+        lon=-74.79500,
+        data_source="International Lake Ontario-St. Lawrence River Board: https://ijc.org/en/loslrb/watershed/outflow-changes",
+    )
+
+
+class LakesConfig(BaseModel):
+    """Main Config for Lakes"""
+
+    input_dir: Path = Field(
+        default=here() / "data/sconus/lakes",
+        description="Input directory. This will be prepended to all paths for other inputs",
+    )
+    lakes_path: Path = Field(
+        default=Path("output/lakes_processed.gpkg"),
+        description="Output process lakes file. This can be used to cache a completed lakes run and use in an NHF build.",
+    )
+    use_cached_lakes: bool = Field(
+        default=False,
+        description="Flag to use the file stored at `lakes_path` for lakes building. This will skip pipeline run. Note: IDs and flowpath association will not be changed.",
+    )
+    nwm: NWMLakeInput = Field(
+        default=NWMLakeInput(),
+        description="All NWM Lakes Input configs. NWM Lakes is a polygon dataset with COMID. This is the operational lakes layer provided by OWP.",
+    )
+    adhoc: AdhocLakeInput = Field(
+        default=AdhocLakeInput(),
+        description="All Adhoc Lakes Input configs. Adhoc lakes have been mapped to COMID, site_no (gage), and dam_id (reference reservoirs) when possible.",
+    )
+    usbr: USBRLakeInput = Field(
+        default=USBRLakeInput(),
+        description="All USBR Lakes Input configs. USBR lakes have been mapped to COMID when possible. If USBR lakes are missing in NWM lakes but available in reference waterbodies, theey will be added.",
+    )
+    ref_wb: RefWaterbodyInput = Field(
+        default=RefWaterbodyInput(),
+        description="All Reference Waterbody Input configs. Reference Waterbodies is a polygon dataset with COMID. Reference waterbodies will be used for Adhoc Lakes that are only found in Reference Waterbodies. The entire Reference Waterbodies file is not run.",
+    )
+    ref_res: ReferenceReservoirsInput = Field(
+        default=ReferenceReservoirsInput(),
+        description="All Reference Reservoirs Input configs. Reference Reservoirs is a point dataset of dams including hydraulic parameters from the National Inventory of Dams (NID).",
+    )
+    dem: LakesDEMInputs = Field(
+        default=LakesDEMInputs(), description="DEM configs to use when getting elevations for lakes."
+    )
+    calculate_elevation: bool = Field(
+        default=True,
+        description="Flag to calculate elevation. This shold be turned on for production runs but can be turned off for faster debugging.",
+    )
+    nid: NIDInputs = Field(
+        default=NIDInputs(),
+        description="All National Inventory of Dams (NID) configs. NID is a point dataset of dam information that is joined to Reference Reservoirs.",
+    )
+    vfp_lk_crosswalk: bool = Field(
+        default=True,
+        description="Flag to perform virtual flowpath-lake crosswalk. This crosswalk intersects all flowpaths with a lake polygon or point.",
+    )
+    fp_id_field: str = Field(
+        default="virtual_fp_id",
+        description="Name of flowpath ID in dataset from which flowpaths are associated.",
+    )
+    fp_id_out_field: str = Field(
+        default="virtual_fp_id",
+        description="Name of flowpath ID field for output after flowpaths are identified",
+    )
+    output_comid_field: str = Field(
+        default="lake_id", description="The common name of 'comid' field that is present in various datasets"
+    )
+    great_lakes: GreatLakesMapping = Field(default=GreatLakesMapping(), description="Great Lakes parameters")
+    validate_duplicates: bool = Field(
+        default=True,
+        description="Flag to search for duplicate lake points during lakes validation. Defaults to true",
+    )
+    save_duplicate_gpkgs: bool = Field(
+        default=False,
+        description="Flag to save the resulting duplicate lake points/polygons as geopackages. Defaults to false",
+    )
+    fields: list[str] = Field(
+        default=[
+            "dam_id",
+            "nidid",
+            "lake_id",
+            "res_id",
+            "LkArea",
+            "LkMxE",
+            "WeirC",
+            "WeirL",
+            "WeirE",
+            "OrificeC",
+            "OrificeA",
+            "OrificeE",
+            "Dam_Length",
+            "ifd",
+            "reservoir_index_AnA",
+            "reservoir_index_Extended_AnA",
+            "reservoir_index_GDL_AK",
+            "reservoir_index_Medium_Range",
+            "reservoir_index_Short_Range",
+        ],
+        description="Final fields. IDs and geometry will be kept by default.",
+    )
+
+    @model_validator(mode="after")
+    def inject_dirs(self: Any) -> Self:  # type: ignore[misc,type-var]
+        """Inject input directories into each input config path"""
+        self.lakes_path = self.input_dir / self.lakes_path
+        self.nid.path = self.input_dir / self.nid.path
+        self.nwm.path = self.input_dir / self.nwm.path
+        self.nwm.buffered_path = self.input_dir / self.nwm.buffered_path
+        self.nwm.fp_associated_path = self.input_dir / self.nwm.fp_associated_path
+        self.nwm.improve_placement_path = self.input_dir / self.nwm.improve_placement_path
+        self.ref_wb.path = self.input_dir / self.ref_wb.path
+        self.ref_wb.fp_associated_path = self.input_dir / self.ref_wb.fp_associated_path
+        self.ref_res.path = self.input_dir / self.ref_res.path
+        self.dem.path = self.input_dir / self.dem.path
+        self.adhoc.path = self.input_dir / self.adhoc.path
+        self.usbr.path = self.input_dir / self.usbr.path
+
+        # optional paths
+        self.nwm.attrib_src_path = (
+            self.input_dir / self.nwm.attrib_src_path if self.nwm.attrib_src_path else None
+        )
+        self.ref_wb.attrib_src_path = (
+            self.input_dir / self.ref_wb.attrib_src_path if self.ref_wb.attrib_src_path else None
+        )
+
+        self.lakes_path.parent.mkdir(parents=True, exist_ok=True)
+
+        return self
+
+
+# Reservoir DA
+class ResCrosswalkFields(BaseModel):
+    """Fields in reservoir DA crosswalk file ("reservoir_index_AnA.netcdf).
+
+    These can be changed in config file if needed and will be input read index functions.
+    """
+
+    lake_id_field: str = Field("lake_id", description="Lake ID field in Res ANA index file")
+    usgs_gage_id_field: str = Field("usgs_gage_id", description="USGS gage ID field in reservoir index file")
+    usgs_lake_id_field: str = Field("usgs_lake_id", description="USGS lake ID field in reservoir index file")
+    usace_gage_id_field: str = Field(
+        "usace_gage_id", description="USACE gage ID field in reservoir index file"
+    )
+    usace_lake_id_field: str = Field(
+        "usace_lake_id", description="USACE lake ID field in reservoir index file"
+    )
+    rfc_gage_id_field: str = Field("rfc_gage_id", description="RFC gage ID in reservoir index")
+    rfc_lake_id_field: str = Field("rfc_lake_id", description="RFC lake ID in reservoir index")
+
+
+class ResCrossWalkInput(BaseModel):
+    """Reservoir crosswalk file ("reservoir_index_AnA.netcdf")"""
+
+    path: Path = Field(
+        default=Path("input/reservoir_index_AnA.nc"),
+        description="File with reservoir crosswalks for USGS, USACE, RFC",
+    )
+    fields: ResCrosswalkFields = Field(
+        default=ResCrosswalkFields(), description="All field mappings for reservoir index file"
+    )
+
+
+class ActiveRFC(BaseModel):
+    """Describes table of active NWS gages for reservoir DA. This is optionally used in gages.
+
+    Retrieved from https://water.noaa.gov/about/data-and-web-services-catalog on 6/15/26
+    """
+
+    path: Path = Field(default=Path("input/nwps_all_gauges_report.csv"))
+    id_field: str = Field(default="nws shef id")
+
+
+class ResDAMapping(BaseModel):
+    """Mapping of reservoir DA types to integer code"""
+
+    level_pool: int = 1
+    usgs_persistence: int = 2
+    usace_persistence: int = 3
+    usbr_persistence: int = 7
+    rfc_forecast: int = 4
+    great_lakes: int = 6
+
+
+class AdhocResDAInput(BaseModel):
+    """Adhoc lakes input for reservoir DA. Must include lake_id and an rfc_field with the name of RFC gage."""
+
+    path: Path = Field(
+        default=Path("input/adhoc_lakes.gpkg"),
+        description="Source path. ResDAConfig will inject preceding input path.",
+    )
+    layer: str = Field(default="adhoc_lakes", description="Layer in adhoc lakes gpkg")
+    run: bool = Field(
+        default=False,
+        description="Flag to use Adhoc Lake input. Must be set to false if file is not present.",
+    )
+    rfc_field: str = Field(default="locationId", description="Field containing RFC gage ID")
+    lake_id_field: str = Field(default="lake_id", description="Field containing common lake COMID")
+    null_value: int = Field(default=-99999, description="Missing data value")
+
+
+class USACEResDAInput(BaseModel):
+    """USACE : lake_id crosswalk for reservoir DA."""
+
+    path: Path = Field(
+        default=Path("input/usace_crosswalk.gpkg"),
+        description="Source path. ResDAConfig will inject preceding input path.",
+    )
+    run: bool = Field(
+        default=False,
+        description="Flag to use USACE reservoir input. Must be set to false if file is not present.",
+    )
+    lake_id_field: str = Field(default="lake_id", description="Field containing common lake COMID")
+    id_field: str = Field(default="location", description="Field containing shared reservoir/gage ID.")
+
+
+class USBRResDAInput(BaseModel):
+    """USBR : lake_id crosswalk for reservoir DA."""
+
+    path: Path = Field(
+        default=Path("input/usbr_lake_crosswalk.gpkg"),
+        description="Source path. ResDAConfig will inject preceding input path.",
+    )
+    run: bool = Field(
+        default=False,
+        description="Flag to use USBR reservoir input. Must be set to false if file is not present.",
+    )
+    lake_id_field: str = Field(default="lake_id", description="Field containing common lake COMID")
+    id_field: str = Field(default="locId", description="Field containing shared reservoir/gage ID.")
+
+
+class ResDAConfig(BaseModel):
+    """Configuration for reservoir DA"""
+
+    input_dir: Path = Field(
+        default=here() / "data/lakes",
+        description="Input directory. This will be prepended to all paths for other inputs",
+    )
+    all_level_pool: bool = Field(
+        default=False,
+        description="Flag to make all reservoirs level pool. This can be used in domains with no lake-gage crosswalk available.",
+    )
+    adhoc: AdhocResDAInput = Field(
+        default=AdhocResDAInput(),
+        description="All Adhoc Lakes Input configs. Adhoc lakes have been mapped to COMID/lake_id, site_no (gage), and dam_id (reference reservoirs) when possible.",
+    )
+    lake_id_field: str = Field(
+        default="lake_id", description="The common name of 'comid' field that is present in various datasets"
+    )
+    gage_id_field: str = Field(default="site_no", description="Name for output gage ID field")
+    da_type_field: str = Field(default="da_type", description="Name for output reservoir DA type field")
+    res_crosswalk: ResCrossWalkInput = Field(
+        default=ResCrossWalkInput(), description="Data for the gage-lake crosswalk"
+    )
+    great_lakes: bool = Field(
+        default=False, description="Flag to add the Great Lakes mappings to the dataframe"
+    )
+
+    generate_additional_crosswalk: bool = Field(
+        default=False,
+        description="Flag to generate lake:gage crosswalks for lakes without RFC or gage information.",
+    )
+    active_rfc: ActiveRFC = Field(
+        default=ActiveRFC(), description="Table of active NWS gages used to filter NWM reservoir index."
+    )
+    usace: USACEResDAInput = Field(
+        default=USACEResDAInput(), description="Crosswalked table of USACE reservoir/gages to lake_id."
+    )
+    usbr: USBRResDAInput = Field(
+        default=USBRResDAInput(), description="Crosswalked table of USBR reservoir/gages to lake_id."
+    )
+    usgs_fix_list: list[str] | None = Field(
+        default=None,
+        description="List of USGS site_no in the reservoir index that are missing a leading 0. These values will have 0 prepended during the pipeline.",
+    )
+
+    @model_validator(mode="after")
+    def inject_dirs(self: Any) -> Self:  # type: ignore[misc,type-var]
+        """Inject input directories into each input config path"""
+        self.adhoc.path = self.input_dir / self.adhoc.path
+        self.res_crosswalk.path = self.input_dir / self.res_crosswalk.path
+        self.active_rfc.path = self.input_dir / self.active_rfc.path
+        self.usace.path = self.input_dir / self.usace.path
+        self.usbr.path = self.input_dir / self.usbr.path
+        return self
 
 
 ### fp_crosswalk  ###
@@ -1060,35 +1422,35 @@ class NWMDefaultHydraulics(Enum):
 
 
 class GroundWaterProjectionCONUS(Enum):
-    """CRS, origin, and size of CONUS NWM grids for groundwater; source:  Fulldom_CONUS_FullRouting.nc"""
+    """CRS, origin (top, left corner), and size of CONUS NWM grids for groundwater; source:  Fulldom_CONUS_FullRouting.nc"""
 
     PROJ4 = "+proj=lcc +lat_1=30 +lat_2=60 +lat_0=40.0000076293945 +lon_0=-97 +x_0=0 +y_0=0 +a=6370000 +b=6370000 +units=m +no_defs"
     X_ORIGIN = -2303874.17655
-    Y_ORIGIN = 1919874.66329
-    WIDTH = 4608
-    HEIGHT = 3840
-    DX = 1000
-    DY = 1000
+    Y_ORIGIN = -1919874.66329
+    WIDTH = 18432
+    HEIGHT = 15360
+    DX = 250
+    DY = 250
 
 
 class GroundWaterProjectionAK(Enum):
-    """CRS, origin, and size of NWM grids for groundwater; source:  Fulldom_AK_FullRouting.nc"""
+    """CRS, origin (top, left corner), and size of NWM grids for groundwater; source:  Fulldom_AK_FullRouting.nc"""
 
-    PROJ4 = "+proj=stere +lat_0=90 +lat_ts=60 +lon_0=-135"
+    PROJ4 = "+proj=stere +lat_0=90 +lat_ts=60 +lon_0=-135 +x_0=0 +y_0=0 +R=6370000 +units=m +no_defs"
     X_ORIGIN = -1130764.7202253528
-    Y_ORIGIN = -2704639.5335353096
+    Y_ORIGIN = -3163389.53353531
     WIDTH = 3516
     HEIGHT = 1816
-    DX = 1000
-    DY = 1000
+    DX = 250
+    DY = 250
 
 
 class GroundWaterProjectionHI(Enum):
-    """CRS, origin, and size of NWM grids for groundwater; source:  Fulldom_HI_FullRouting.nc"""
+    """CRS, origin (top, left corner), and size of NWM grids for groundwater; source:  Fulldom_HI_FullRouting.nc"""
 
     PROJ4 = "+proj=lcc +units=m +a=6370000.0 +b=6370000.0 +lat_1=10.0 +lat_2=30.0 +lat_0=20.6 +lon_0=-157.42 +x_0=0 +y_0=0 +k_0=1.0 +nadgrids=@null +wktext +no_defs"
     X_ORIGIN = -294950.07097397465
-    Y_ORIGIN = 194950.63030902296
+    Y_ORIGIN = -194949.36969098
     WIDTH = 5900
     HEIGHT = 3900
     DX = 100
@@ -1096,11 +1458,11 @@ class GroundWaterProjectionHI(Enum):
 
 
 class GroundWaterProjectionPRVI(Enum):
-    """CRS, origin, and size of NWM grids for groundwater; source:  Fulldom_PRVI_FullRouting.nc"""
+    """CRS, origin (top, left corner), and size of NWM grids for groundwater; source:  Fulldom_PRVI_FullRouting.nc"""
 
     PROJ4 = "+proj=lcc +units=m +a=6370000.0 +b=6370000.0 +lat_1=18.1 +lat_2=18.1 +lat_0=18.1 +lon_0=-65.91 +x_0=0 +y_0=0 +k_0=1.0 +nadgrids=@null +wktext  +no_defs"
     X_ORIGIN = -149949.83
-    Y_ORIGIN = 54951.032
+    Y_ORIGIN = -54948.968
     WIDTH = 3000
     HEIGHT = 1100
     DX = 100

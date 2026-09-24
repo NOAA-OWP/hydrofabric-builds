@@ -1,0 +1,54 @@
+{
+  "description": "Configurations for running flowpath attributes",
+  "properties": {
+    "hf_path": {
+      "default": null,
+      "description": "Path to input and output hydrofabric",
+      "format": "path",
+      "title": "Hydrofabric Path",
+      "type": "string"
+    },
+    "flowpath_id": {
+      "default": "fp_id",
+      "description": "Flowpath ID field",
+      "title": "Flowpath ID",
+      "type": "string"
+    },
+    "use_stream_order": {
+      "default": true,
+      "description": "Setting to use stream order to calculate Manning's n (n), Bottom Width (BtmWdth), and Channel side slope (ChSlp). When true, calculate these attributes from stream order. When false, use defaults.",
+      "title": "Stream Order Setting",
+      "type": "boolean"
+    },
+    "dem_path": {
+      "default": "nhf-builds/data/usgs_250m_dem_5070.tif",
+      "description": "Path to DEM",
+      "format": "path",
+      "title": "DEM Path",
+      "type": "string"
+    },
+    "tw_path": {
+      "default": null,
+      "description": "Path to RiverML topwidth predictions. If None, it will be skipped.",
+      "format": "path",
+      "title": "Topwidth Path",
+      "type": "string"
+    },
+    "y_path": {
+      "default": null,
+      "description": "Path to RiverML Y predictions. If None, it will be skipped.",
+      "format": "path",
+      "title": "Y Path",
+      "type": "string"
+    },
+    "r_path": {
+      "default": null,
+      "description": "Path to RiverML R predictions. If None, it will be skipped.",
+      "format": "path",
+      "title": "R Path",
+      "type": "string"
+    }
+  },
+  "title": "FlowpathAttributesModelConfig",
+  "type": "object"
+}

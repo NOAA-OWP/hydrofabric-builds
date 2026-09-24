@@ -53,18 +53,17 @@ dependencies = [
   "rasterio==1.4.3",
   "rustworkx==0.17.1",
   "exactextract==0.2.2",
+  "fiona==1.10.1",
   "rasterstats>=0.20.0",
   "xarray-spatial==0.5.2",
   "dask==2026.1.2",
   "zarr==3.1.5",
-  "pandantic==1.0.0"
+  "pandantic==1.0.0",
+  "openlocationcode>=1.0.1",
 ]
 
 [project.optional-dependencies]
-docs = [
-  "mkdocs-material==9.6.14",
-  "sympy==1.14.0"
-]
+docs = ["mkdocs-material==9.6.14", "sympy==1.14.0"]
 
 [dependency-groups]
 dev = [
@@ -75,15 +74,8 @@ dev = [
   "types-PyYaml",
   "types-requests==2.32.4.20250611",
 ]
-examples = [
-    "ipykernel==6.29.5",
-    "jupyterlab==4.4.3"
-]
-tests = [
-    "pytest==8.4.1",
-    "pytest-cov==6.1.1",
-    "astropy==7.1.0"
-]
+examples = ["ipykernel==6.29.5", "jupyterlab==4.4.3"]
+tests = ["pytest==8.4.1", "pytest-cov==6.1.1", "astropy==7.1.0", "pytest-mock==3.15.1"]
 
 [tool.uv]
 default-groups = ["dev", "examples", "tests"]
@@ -158,7 +150,14 @@ warn_unused_ignores = true
 
 [tool.pytest.ini_options]
 filterwarnings = [
-    "ignore::DeprecationWarning:pyogrio",
-    "ignore:The 'shapely.geos' module is deprecated:DeprecationWarning",
-    "ignore:The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
+  "ignore::DeprecationWarning:pyogrio",
+  "ignore:The 'shapely.geos' module is deprecated:DeprecationWarning",
+  "ignore:The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
+  "ignore:Conversion of an array with *:DeprecationWarning"
 ]
+
+[tool.basilisk]
+
+[tool.basilisk.rule-tags]
+basilisk = "error"
+

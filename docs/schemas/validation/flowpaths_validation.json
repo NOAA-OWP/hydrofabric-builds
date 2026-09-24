@@ -1,0 +1,191 @@
+{
+  "description": "Pydantic class containing the data type, range (if known) of the flowpath attributes",
+  "properties": {
+    "fp_id": {
+      "description": "unique flowpath identifier",
+      "title": "Fp Id",
+      "type": "integer"
+    },
+    "dn_nex_id": {
+      "description": "connected downstream nexus identifier",
+      "title": "Dn Nex Id",
+      "type": "integer"
+    },
+    "up_nex_id": {
+      "description": "connected upstream nexus identifier",
+      "title": "Up Nex Id",
+      "type": "integer"
+    },
+    "div_id": {
+      "description": "unique divide identifier",
+      "title": "Div Id",
+      "type": "integer"
+    },
+    "vpu_id": {
+      "description": "Vector Processing Unit Identifier",
+      "title": "Vpu Id",
+      "type": "string"
+    },
+    "length_km": {
+      "description": "flowpath length in kilometers",
+      "exclusiveMinimum": 0.0,
+      "title": "Length Km",
+      "type": "number"
+    },
+    "area_sqkm": {
+      "description": "incremental area of divide in kilometers",
+      "exclusiveMinimum": 0.0,
+      "title": "Area Sqkm",
+      "type": "number"
+    },
+    "total_da_sqkm": {
+      "description": "total upstream drainage area in kilometers",
+      "exclusiveMinimum": 0.0,
+      "title": "Total Da Sqkm",
+      "type": "number"
+    },
+    "mainstem_lp": {
+      "description": "associated upstream drainage area in square kilometers",
+      "title": "Mainstem Lp",
+      "type": "integer"
+    },
+    "path_length": {
+      "description": "downstream path length",
+      "exclusiveMinimum": 0.0,
+      "title": "Path Length",
+      "type": "number"
+    },
+    "dn_hydroseq": {
+      "description": "downstream hydrologic sequence",
+      "title": "Dn Hydroseq",
+      "type": "integer"
+    },
+    "hydroseq": {
+      "description": "hydrologic sequence",
+      "title": "Hydroseq",
+      "type": "integer"
+    },
+    "stream_order": {
+      "description": "stream order of mapped reference flowpath",
+      "title": "Stream Order",
+      "type": "integer"
+    },
+    "mean_elevation": {
+      "description": "terrain elevation",
+      "exclusiveMaximum": 4422.0,
+      "exclusiveMinimum": -86.0,
+      "title": "Mean Elevation",
+      "type": "number"
+    },
+    "slope": {
+      "description": "terrain slope",
+      "exclusiveMaximum": 90.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Slope",
+      "type": "number"
+    },
+    "n": {
+      "description": "Manning's in channel roughness",
+      "title": "N",
+      "type": "number"
+    },
+    "r": {
+      "description": "hydrologic radius",
+      "title": "R",
+      "type": "number"
+    },
+    "y": {
+      "description": "estimated depth associated with top width",
+      "title": "Y",
+      "type": "number"
+    },
+    "ncc": {
+      "description": "compound channel top width",
+      "title": "Ncc",
+      "type": "number"
+    },
+    "btmwdth": {
+      "description": "bottom width of channel",
+      "title": "Btmwdth",
+      "type": "number"
+    },
+    "chslp": {
+      "description": "channel side slope",
+      "title": "Chslp",
+      "type": "number"
+    },
+    "musx": {
+      "description": "Muskingum weighting factor",
+      "title": "Musx",
+      "type": "number"
+    },
+    "musk": {
+      "description": "Muskingum routing time",
+      "title": "Musk",
+      "type": "integer"
+    },
+    "topwdth": {
+      "description": "top width",
+      "title": "Topwdth",
+      "type": "number"
+    },
+    "topwdthcc": {
+      "description": "compound channel top width",
+      "title": "Topwdthcc",
+      "type": "number"
+    },
+    "topwdthcc_ml": {
+      "description": "compound channel top width at maximum levee",
+      "title": "Topwdthcc Ml",
+      "type": "number"
+    },
+    "topwdth_ml": {
+      "description": "top width at maximum levee",
+      "title": "Topwdth Ml",
+      "type": "number"
+    },
+    "y_ml": {
+      "description": "estimated depth associated with top wideth at maximum levee",
+      "title": "Y Ml",
+      "type": "number"
+    },
+    "r_ml": {
+      "description": "hydraulic radius at maximum levee",
+      "title": "R Ml",
+      "type": "number"
+    }
+  },
+  "required": [
+    "fp_id",
+    "dn_nex_id",
+    "up_nex_id",
+    "div_id",
+    "vpu_id",
+    "length_km",
+    "area_sqkm",
+    "total_da_sqkm",
+    "mainstem_lp",
+    "path_length",
+    "dn_hydroseq",
+    "hydroseq",
+    "stream_order",
+    "mean_elevation",
+    "slope",
+    "n",
+    "r",
+    "y",
+    "ncc",
+    "btmwdth",
+    "chslp",
+    "musx",
+    "musk",
+    "topwdth",
+    "topwdthcc",
+    "topwdthcc_ml",
+    "topwdth_ml",
+    "y_ml",
+    "r_ml"
+  ],
+  "title": "Flowpaths",
+  "type": "object"
+}

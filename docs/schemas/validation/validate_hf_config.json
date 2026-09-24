@@ -1,0 +1,26 @@
+{
+  "description": "config class for the hf_validate block in the YAML",
+  "properties": {
+    "calibration_gages_path": {
+      "default": "data/gages/validation/calibratable_gages.csv",
+      "format": "path",
+      "title": "Calibration Gages Path",
+      "type": "string"
+    },
+    "routelink_gages_path": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Routelink Gages Path"
+    }
+  },
+  "title": "ValidateHFConfig",
+  "type": "object"
+}

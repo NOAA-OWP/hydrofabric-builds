@@ -1,0 +1,11 @@
+{
+  "class_name": "GroundWaterProjectionHI",
+  "values": {
+    "PROJ4": "+proj=lcc +units=m +a=6370000.0 +b=6370000.0 +lat_1=10.0 +lat_2=30.0 +lat_0=20.6 +lon_0=-157.42 +x_0=0 +y_0=0 +k_0=1.0 +nadgrids=@null +wktext +no_defs",
+    "X_ORIGIN": -294950.07097397465,
+    "Y_ORIGIN": -194949.36969098,
+    "WIDTH": 5900,
+    "HEIGHT": 3900,
+    "DX": 100
+  }
+}

@@ -9,7 +9,7 @@ from examples.divides_mapping import main  # adjust if your module name is diffe
 
 
 @pytest.fixture
-def tiny_config_and_data(tmp_path: Path):
+def tiny_config_and_data(tmp_path: Path) -> tuple[dict, Path]:
     """Create tiny test GeoPackages/Shapefiles and a config dict."""
     # ---- make a tiny ref_fabric GeoDataFrame (g1) ----
     # p1: unit square from (0,0) to (1,1)
@@ -78,7 +78,7 @@ def tiny_config_and_data(tmp_path: Path):
     return cfg, out_dir
 
 
-def test_main_builds_expected_nested_dict(tiny_config_and_data):
+def test_main_builds_expected_nested_dict(tiny_config_and_data: tuple[dict, Path]) -> None:
     cfg, out_dir = tiny_config_and_data
 
     # Run main function

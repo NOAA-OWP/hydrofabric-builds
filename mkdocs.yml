@@ -1,7 +1,7 @@
 site_name: hydrofabric-builds
 site_description: Building Hydrofabric(s) and processing ancillary data
-repo_url: https://github.com/NGWPC/hydrofabric-builds
-repo_name: NGWPC/hydrofabric-builds
+repo_url: https://github.com/noaa-owp/hydrofabric-builds
+repo_name: NOAA-OWP/hydrofabric-builds
 theme:
   name: material
   features:
@@ -48,6 +48,13 @@ plugins:
 nav:
   - Home:
     - index.md
-  - Builds:
+  - Hydrofabric:
     - builds/index.md
-    - Irrigation: builds/irrigation.md
+    - Divide Attributes: builds/divide_attributes.md
+    - Flowpath Attributes: builds/flowpath_attributes.md
+    - Lakes: builds/lakes.md
+    - Reservoir Attributes: builds/reservoir_attrs.md
+    - Gage Snapping: builds/snap_gages_to_flowpaths.md
+    - Gages: builds/POI_gages_builder.md
+  - Development:
+    - development/development.md

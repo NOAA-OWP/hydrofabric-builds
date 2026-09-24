@@ -1,0 +1,96 @@
+{
+  "description": "Lakes: Reference Waterbodies is a polygon dataset with COMID. Reference waterbodies will be used for Adhoc Lakes that are only found in Reference Waterbodies. The entire Reference Waterbodies file is not run.",
+  "properties": {
+    "path": {
+      "default": "input/reference_waterbodies.gpkg",
+      "description": "Source path. LakesConfig will inject preceding input path.",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "run": {
+      "default": true,
+      "description": "Flag to run Reference Waterbodies input. Must be set to false if file is not present.",
+      "title": "Run",
+      "type": "boolean"
+    },
+    "fp_associated_path": {
+      "default": "input/refwb_tmp.gpkg",
+      "description": "A temporary layer to read waterbodies from where flowpaths have been associated and attributes joined. Skips flowpath association.",
+      "format": "path",
+      "title": "Fp Associated Path",
+      "type": "string"
+    },
+    "associate_flowpaths": {
+      "default": true,
+      "description": "Flag to run flowpath association",
+      "title": "Associate Flowpaths",
+      "type": "boolean"
+    },
+    "flowpath_association_method": {
+      "default": "polygon_outlet",
+      "description": "Type of flowpath association. Options are `polygon_outlet` or `nearest_point`",
+      "title": "Flowpath Association Method",
+      "type": "string"
+    },
+    "search_radius_m": {
+      "default": 1000.0,
+      "description": "Distance from flowpath to search when associating flowpaths.",
+      "title": "Search Radius M",
+      "type": "number"
+    },
+    "id_field": {
+      "default": "comid",
+      "description": "ID field for reference waterbodies",
+      "title": "Id Field",
+      "type": "string"
+    },
+    "output_id_field": {
+      "default": "lake_id",
+      "description": "ID field to change name to for reference waterbodies",
+      "title": "Output Id Field",
+      "type": "string"
+    },
+    "intersection_length_min_m": {
+      "default": 3.0,
+      "description": "Minimum prefered intersection length when associating polygons with flowpaths. If the flowpath intersection is extremely short, it can sometimes be almost entirely on a long downstream flowpath.",
+      "title": "Intersection Length Min M",
+      "type": "number"
+    },
+    "attrib_src_path": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Source file for joining attributes from another file. It will be skipped if null.",
+      "title": "Attrib Src Path"
+    },
+    "attrib_src_layer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Source file layer for importing attributes",
+      "title": "Attrib Src Layer"
+    },
+    "attrib_src_key": {
+      "default": null,
+      "description": "Source file key to match when importing attributes",
+      "title": "Attrib Src Key",
+      "type": "string"
+    }
+  },
+  "title": "RefWaterbodyInput",
+  "type": "object"
+}

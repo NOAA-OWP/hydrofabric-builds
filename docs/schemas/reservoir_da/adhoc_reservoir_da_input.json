@@ -1,0 +1,44 @@
+{
+  "description": "Adhoc lakes input for reservoir DA. Must include lake_id and an rfc_field with the name of RFC gage.",
+  "properties": {
+    "path": {
+      "default": "input/adhoc_lakes.gpkg",
+      "description": "Source path. ResDAConfig will inject preceding input path.",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "layer": {
+      "default": "adhoc_lakes",
+      "description": "Layer in adhoc lakes gpkg",
+      "title": "Layer",
+      "type": "string"
+    },
+    "run": {
+      "default": false,
+      "description": "Flag to use Adhoc Lake input. Must be set to false if file is not present.",
+      "title": "Run",
+      "type": "boolean"
+    },
+    "rfc_field": {
+      "default": "locationId",
+      "description": "Field containing RFC gage ID",
+      "title": "Rfc Field",
+      "type": "string"
+    },
+    "lake_id_field": {
+      "default": "lake_id",
+      "description": "Field containing common lake COMID",
+      "title": "Lake Id Field",
+      "type": "string"
+    },
+    "null_value": {
+      "default": -99999,
+      "description": "Missing data value",
+      "title": "Null Value",
+      "type": "integer"
+    }
+  },
+  "title": "AdhocResDAInput",
+  "type": "object"
+}

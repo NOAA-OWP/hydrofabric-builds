@@ -1,0 +1,84 @@
+{
+  "description": "Lakes: Reference Reservoirs is a point dataset of dams including hydraulic parameters from the National Inventory of Dams (NID).",
+  "properties": {
+    "path": {
+      "default": "input/reference-reservoirs-v1.gpkg",
+      "description": "Source path. When using defaults, LakesConfig will inject preceding input path.",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "layer": {
+      "default": "reference-reservoirs-v1",
+      "description": "GPKG layer",
+      "title": "Layer",
+      "type": "string"
+    },
+    "run": {
+      "default": true,
+      "description": "Flag to run reference reservoirs input. Must be set to false if file is not present.",
+      "title": "Run",
+      "type": "boolean"
+    },
+    "src_crs": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Source CRS",
+      "title": "Src Crs"
+    },
+    "output_crs": {
+      "default": "EPSG:5070",
+      "description": "Output CRS",
+      "title": "Output Crs",
+      "type": "string"
+    },
+    "distance_to_fp_col": {
+      "default": "distance_to_fp_m",
+      "description": "Distance to flowpath (m) column",
+      "title": "Distance To Fp Col",
+      "type": "string"
+    },
+    "wb_area_col": {
+      "default": "wb_areasqkm",
+      "description": "Area (km2) column",
+      "title": "Wb Area Col",
+      "type": "string"
+    },
+    "ref_wb_id_col": {
+      "default": "ref_fab_wb",
+      "description": "Reference waterbody ID column",
+      "title": "Ref Wb Id Col",
+      "type": "string"
+    },
+    "min_wb_area_sqkm": {
+      "default": 0.2,
+      "description": "Minimum waterbody area (km2) to keep for RFC-DA. Use 0 to remove None.",
+      "title": "Min Wb Area Sqkm",
+      "type": "number"
+    },
+    "max_distance_m": {
+      "default": 1000.0,
+      "description": "max distance of reference reservoir points from column 'distance_to_fp_m'",
+      "title": "Max Distance M",
+      "type": "number"
+    },
+    "ref_res_keep": {
+      "default": [],
+      "description": "List of reference reservoir dam_id's to keep in RFCDA layer",
+      "items": {
+        "type": "string"
+      },
+      "title": "Ref Res Keep",
+      "type": "array"
+    }
+  },
+  "title": "ReferenceReservoirsInput",
+  "type": "object"
+}

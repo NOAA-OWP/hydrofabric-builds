@@ -12,7 +12,6 @@ import xarray as xr
 from exactextract import exact_extract
 
 from hydrofabric_builds.hydrofabric.graph import _validate_and_fix_geometries
-from hydrofabric_builds.hydrofabric.gw import groundwater_attributes
 from hydrofabric_builds.schemas.hydrofabric import (
     DivideAttributeConfig,
     DivideAttributesModelConfig,
@@ -344,22 +343,6 @@ def _glaciers(model_cfg: DivideAttributesModelConfig) -> None:
         return
 
 
-def _groundwater(model_cfg: DivideAttributesModelConfig) -> None:
-    """Test if groundwater is available and joins
-
-    Groundwater attribute should be called 'GWBUCKPARM'
-
-    ***Note***
-    Coeff, Expon, and Zmax will be joined. Does not honor field name in attribute config.
-
-    Parameters
-    ----------
-    model_cfg : DivideAttributesModelConfig
-        Pydantic model for full model config
-    """
-    groundwater_attributes(model_cfg)
-
-
 def _teardown(tmpdir: Path) -> None:
     """Delete tmp paths from tmp directory
 
@@ -384,6 +367,7 @@ def divide_attributes_pipeline_single(model_cfg: DivideAttributesModelConfig) ->
     t0 = perf_counter()
 
     tif_attributes = [cfg for cfg in model_cfg.attributes if ".tif" in cfg.file_name.name]
+
     for cfg in tif_attributes:
         # if there is a divide mask file provided, use it as an alternate divides file
         _calculate_attribute(model_cfg, cfg) if not model_cfg.divides_masked else _calculate_attribute(
@@ -392,9 +376,8 @@ def divide_attributes_pipeline_single(model_cfg: DivideAttributesModelConfig) ->
 
     _concatenate_attributes(model_cfg)
 
-    # optional glaciers and groundwater - overwrites file if calculated
+    # optional glaciers - overwrites file if calculated
     _glaciers(model_cfg)
-    _groundwater(model_cfg)
 
     _teardown(model_cfg.tmp_dir)
     logger.info(f"divide attributes total time: {round(((perf_counter() - t0) / 60), 2)} min")
@@ -475,9 +458,8 @@ def divide_attributes_pipeline_parallel(model_cfg: DivideAttributesModelConfig, 
         _concatenate_divides_parallel(model_cfg)
         logger.info(f"concatenate divides: {round((perf_counter() - t2) / 60, 2)} min")
 
-        # optional glaciers and groundwater - overwrites file if calculated
+        # optional glaciers - overwrites file if calculated
         _glaciers(model_cfg)
-        _groundwater(model_cfg)
 
         # delete all tmp files
         _teardown(tmp_dir)

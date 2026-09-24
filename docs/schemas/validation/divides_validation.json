@@ -1,0 +1,521 @@
+{
+  "description": "Pydantic class containing the data type, range (if known) of the divide attributes",
+  "properties": {
+    "domain": {
+      "description": "hydrofabric domain",
+      "title": "Domain",
+      "type": "string"
+    },
+    "div_id": {
+      "description": "unique divide identifier",
+      "exclusiveMinimum": 0,
+      "title": "Div Id",
+      "type": "integer"
+    },
+    "vpu_id": {
+      "description": "Vector Processing Unit Identifier",
+      "title": "Vpu Id",
+      "type": "string"
+    },
+    "type": {
+      "description": "Divide Type (one of independent, aggregate, connectors)",
+      "title": "Type",
+      "type": "string"
+    },
+    "area_sqkm": {
+      "description": "catchment area in square kilometers",
+      "exclusiveMinimum": 0.0,
+      "title": "Area Sqkm",
+      "type": "number"
+    },
+    "bexp_mode": {
+      "description": "beta exponent on Clapp-Hornberger (1978) soil water relationship",
+      "exclusiveMaximum": 15.0,
+      "exclusiveMinimum": 2.0,
+      "title": "Bexp Mode",
+      "type": "number"
+    },
+    "isltyp_mode": {
+      "description": "dominant soil type catagory",
+      "maximum": 16,
+      "minimum": 1,
+      "title": "Isltyp Mode",
+      "type": "number"
+    },
+    "ivgtyp_mode": {
+      "description": "domainant vegetation type category",
+      "maximum": 16,
+      "minimum": 1,
+      "title": "Ivgtyp Mode",
+      "type": "number"
+    },
+    "dksat_geomean": {
+      "description": "saturated hydraulic conductivity",
+      "exclusiveMaximum": 0.00141,
+      "exclusiveMinimum": 1.95e-07,
+      "title": "Dksat Geomean",
+      "type": "number"
+    },
+    "psisat_geomean": {
+      "description": "saturated capillary head",
+      "exclusiveMaximum": 0.955,
+      "exclusiveMinimum": 0.036,
+      "title": "Psisat Geomean",
+      "type": "number"
+    },
+    "cwpvt_mean": {
+      "description": "empirical wind canopy parameter",
+      "exclusiveMaximum": 0.36,
+      "exclusiveMinimum": 0.09,
+      "title": "Cwpvt Mean",
+      "type": "number"
+    },
+    "mp_mean": {
+      "description": "slope of conductance to photosynthesis relationship",
+      "exclusiveMaximum": 12.6,
+      "exclusiveMinimum": 3.6,
+      "title": "Mp Mean",
+      "type": "number"
+    },
+    "mfsno_mean": {
+      "description": "melt factor for snow depletion curve",
+      "exclusiveMaximum": 4.0,
+      "exclusiveMinimum": 0.5,
+      "title": "Mfsno Mean",
+      "type": "number"
+    },
+    "quartz_mean": {
+      "description": "mean soil quartz content",
+      "exclusiveMaximum": 1.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Quartz Mean",
+      "type": "number"
+    },
+    "refkdt_mean": {
+      "description": "reference soil infiltration parameter",
+      "exclusiveMaximum": 4.0,
+      "exclusiveMinimum": 0.1,
+      "title": "Refkdt Mean",
+      "type": "number"
+    },
+    "slope1km_mean": {
+      "description": "Modifies the gradient of the hydraulic head at the soil bottom",
+      "exclusiveMaximum": 1.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Slope1Km Mean",
+      "type": "number"
+    },
+    "smcmax_mean": {
+      "description": "saturated soil moisture content",
+      "exclusiveMaximum": 0.9,
+      "exclusiveMinimum": 0.16,
+      "title": "Smcmax Mean",
+      "type": "number"
+    },
+    "smcwlt_mean": {
+      "description": "wilting point soil moisture content",
+      "exclusiveMaximum": 0.3,
+      "exclusiveMinimum": 0.05,
+      "title": "Smcwlt Mean",
+      "type": "number"
+    },
+    "vcmx_mean": {
+      "description": "Modifies the gradient of the hydraulic head at the soil bottom",
+      "exclusiveMaximum": 112.0,
+      "exclusiveMinimum": 24.0,
+      "title": "Vcmx Mean",
+      "type": "number"
+    },
+    "imperv_mean": {
+      "description": "Modifies the gradient of the hydraulic head at the soil bottom",
+      "exclusiveMaximum": 1.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Imperv Mean",
+      "type": "number"
+    },
+    "twi_q25": {
+      "description": "Topographic wetness index 1st quartile",
+      "title": "Twi Q25",
+      "type": "number"
+    },
+    "twi_q50": {
+      "description": "Topographic wetness index 2nd quartile",
+      "title": "Twi Q50",
+      "type": "number"
+    },
+    "twi_q75": {
+      "description": "Topographic wetness index 3rd quartile",
+      "title": "Twi Q75",
+      "type": "number"
+    },
+    "twi_q100": {
+      "description": "Topographic wetness index 4th quartile",
+      "title": "Twi Q100",
+      "type": "number"
+    },
+    "twi_q10": {
+      "description": "Topographic wetness index 10th percentile",
+      "title": "Twi Q10",
+      "type": "number"
+    },
+    "twi_q20": {
+      "description": "Topographic wetness index 20th percentile",
+      "title": "Twi Q20",
+      "type": "number"
+    },
+    "twi_q30": {
+      "description": "Topographic wetness index 30th percentile",
+      "title": "Twi Q30",
+      "type": "number"
+    },
+    "twi_q40": {
+      "description": "Topographic wetness index 40th percentile",
+      "title": "Twi Q40",
+      "type": "number"
+    },
+    "twi_q60": {
+      "description": "Topographic wetness index 60th percentile",
+      "title": "Twi Q60",
+      "type": "number"
+    },
+    "twi_q70": {
+      "description": "Topographic wetness index 70th percentile",
+      "title": "Twi Q70",
+      "type": "number"
+    },
+    "twi_q80": {
+      "description": "Topographic wetness index 80th percentile",
+      "title": "Twi Q80",
+      "type": "number"
+    },
+    "twi_q90": {
+      "description": "Topographic wetness index 10th percentile",
+      "title": "Twi Q90",
+      "type": "number"
+    },
+    "elevation_mean": {
+      "description": "terrain elevation",
+      "exclusiveMaximum": 4422.0,
+      "exclusiveMinimum": -86.0,
+      "title": "Elevation Mean",
+      "type": "number"
+    },
+    "slope250m_mean": {
+      "description": "terrain slope",
+      "exclusiveMaximum": 90.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Slope250M Mean",
+      "type": "number"
+    },
+    "aspect_circmean": {
+      "description": "terrain aspect",
+      "exclusiveMaximum": 360.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Aspect Circmean",
+      "type": "number"
+    },
+    "lzfpm_mean": {
+      "description": "Maximum lower zone free water mean (primary)",
+      "exclusiveMaximum": 600.0,
+      "exclusiveMinimum": 40.0,
+      "title": "Lzfpm Mean",
+      "type": "number"
+    },
+    "lzpk_mean": {
+      "description": "Lower zone recession coefficient mean (primary)",
+      "exclusiveMaximum": 0.015,
+      "exclusiveMinimum": 0.001,
+      "title": "Lzpk Mean",
+      "type": "number"
+    },
+    "lztwm_mean": {
+      "description": "Maximum lower zone tension water mean",
+      "exclusiveMaximum": 300.0,
+      "exclusiveMinimum": 75.0,
+      "title": "Lztwm Mean",
+      "type": "number"
+    },
+    "rexp_mean": {
+      "description": "Percolation equation exponent mean",
+      "exclusiveMaximum": 3.5,
+      "exclusiveMinimum": 1.4,
+      "title": "Rexp Mean",
+      "type": "number"
+    },
+    "uzk_mean": {
+      "description": "Upper zone recession coefficient mean",
+      "exclusiveMaximum": 0.5,
+      "exclusiveMinimum": 0.2,
+      "title": "Uzk Mean",
+      "type": "number"
+    },
+    "zperc_mean": {
+      "description": "Minimum percolation rate coefficient mean",
+      "exclusiveMaximum": 360.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Zperc Mean",
+      "type": "number"
+    },
+    "lzfsm_mean": {
+      "description": "Maximum lower zone free water mean (secondary aka supplemental)",
+      "exclusiveMaximum": 360.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Lzfsm Mean",
+      "type": "number"
+    },
+    "lzsk_mean": {
+      "description": "Lower zone recession coefficient mean, (secondary aka supplemental)",
+      "exclusiveMaximum": 0.2,
+      "exclusiveMinimum": 0.03,
+      "title": "Lzsk Mean",
+      "type": "number"
+    },
+    "pfree_mean": {
+      "description": "Fraction of water percolating from upper zone directly to lower zone free water storage (mean)",
+      "exclusiveMaximum": 0.5,
+      "exclusiveMinimum": 0.0,
+      "title": "Pfree Mean",
+      "type": "number"
+    },
+    "uzfwm_mean": {
+      "description": "Maximum upper zone free water mean",
+      "exclusiveMaximum": 100.0,
+      "exclusiveMinimum": 10.0,
+      "title": "Uzfwm Mean",
+      "type": "number"
+    },
+    "uztwm_mean": {
+      "description": "Upper zone tension water maximum storage mean",
+      "exclusiveMaximum": 125.0,
+      "exclusiveMinimum": 25.0,
+      "title": "Uztwm Mean",
+      "type": "number"
+    },
+    "mfmin_mean": {
+      "description": "Minimum non-rain melt factor mean",
+      "exclusiveMaximum": 0.6,
+      "exclusiveMinimum": 0.01,
+      "title": "Mfmin Mean",
+      "type": "number"
+    },
+    "mfmax_mean": {
+      "description": "Maximum non-rain melt factor mean",
+      "exclusiveMaximum": 360.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Mfmax Mean",
+      "type": "number"
+    },
+    "uadj_mean": {
+      "description": "Average wind function for rain on snow (mean)",
+      "exclusiveMaximum": 0.2,
+      "exclusiveMinimum": 0.01,
+      "title": "Uadj Mean",
+      "type": "number"
+    },
+    "a_xinanjiang_inflection_point_parameter": {
+      "description": "Inflection point parameter for the Xinanjiang runoff generation model configuration",
+      "exclusiveMaximum": 0.5,
+      "exclusiveMinimum": -0.5,
+      "title": "A Xinanjiang Inflection Point Parameter",
+      "type": "number"
+    },
+    "b_xinanjiang_shape_parameter": {
+      "description": "Inflection point parameter for the Xinanjiang runoff generation model configuration",
+      "exclusiveMaximum": 10.0,
+      "exclusiveMinimum": 0.01,
+      "title": "B Xinanjiang Shape Parameter",
+      "type": "number"
+    },
+    "x_xinanjiang_shape_parameter": {
+      "description": "Main, exponential shape parameter for the Xinanjiang runoff generation model configuration",
+      "exclusiveMaximum": 10.0,
+      "exclusiveMinimum": 0.01,
+      "title": "X Xinanjiang Shape Parameter",
+      "type": "number"
+    },
+    "temp_delta_jan_mean": {
+      "description": "mean temperature difference for January",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Jan Mean",
+      "type": "number"
+    },
+    "temp_delta_feb_mean": {
+      "description": "mean temperature difference for February",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Feb Mean",
+      "type": "number"
+    },
+    "temp_delta_mar_mean": {
+      "description": "mean temperature difference for March",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Mar Mean",
+      "type": "number"
+    },
+    "temp_delta_apr_mean": {
+      "description": "mean temperature difference for April",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Apr Mean",
+      "type": "number"
+    },
+    "temp_delta_may_mean": {
+      "description": "mean temperature difference for May",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta May Mean",
+      "type": "number"
+    },
+    "temp_delta_jun_mean": {
+      "description": "mean temperature difference for June",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Jun Mean",
+      "type": "number"
+    },
+    "temp_delta_jul_mean": {
+      "description": "mean temperature difference for July",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Jul Mean",
+      "type": "number"
+    },
+    "temp_delta_aug_mean": {
+      "description": "mean temperature difference for August",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Aug Mean",
+      "type": "number"
+    },
+    "temp_delta_sep_mean": {
+      "description": "mean temperature difference for September",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Sep Mean",
+      "type": "number"
+    },
+    "temp_delta_oct_mean": {
+      "description": "mean temperature difference for October",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Oct Mean",
+      "type": "number"
+    },
+    "temp_delta_nov_mean": {
+      "description": "mean temperature difference for November",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Nov Mean",
+      "type": "number"
+    },
+    "temp_delta_dec_mean": {
+      "description": "mean temperature difference for December",
+      "exclusiveMinimum": 0.0,
+      "title": "Temp Delta Dec Mean",
+      "type": "number"
+    },
+    "lat": {
+      "description": "latitude of divide centroid",
+      "title": "Lat",
+      "type": "number"
+    },
+    "lon": {
+      "description": "longitude of divide centroid",
+      "title": "Lon",
+      "type": "number"
+    },
+    "glacier_percent": {
+      "description": "percentage of glacier cover in the divide",
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Glacier Percent",
+      "type": "number"
+    },
+    "cgw": {
+      "description": "groundwater coefficient",
+      "exclusiveMaximum": 0.0018,
+      "exclusiveMinimum": 1.8e-06,
+      "title": "Cgw",
+      "type": "number"
+    },
+    "expon": {
+      "description": "groundwater exponent",
+      "exclusiveMaximum": 8.0,
+      "exclusiveMinimum": 1.0,
+      "title": "Expon",
+      "type": "number"
+    },
+    "max_gw_storage": {
+      "description": "The total height of the baseflow bucket",
+      "exclusiveMaximum": 0.25,
+      "exclusiveMinimum": 0.01,
+      "title": "Max Gw Storage",
+      "type": "number"
+    }
+  },
+  "required": [
+    "domain",
+    "div_id",
+    "vpu_id",
+    "type",
+    "area_sqkm",
+    "bexp_mode",
+    "isltyp_mode",
+    "ivgtyp_mode",
+    "dksat_geomean",
+    "psisat_geomean",
+    "cwpvt_mean",
+    "mp_mean",
+    "mfsno_mean",
+    "quartz_mean",
+    "refkdt_mean",
+    "slope1km_mean",
+    "smcmax_mean",
+    "smcwlt_mean",
+    "vcmx_mean",
+    "imperv_mean",
+    "twi_q25",
+    "twi_q50",
+    "twi_q75",
+    "twi_q100",
+    "twi_q10",
+    "twi_q20",
+    "twi_q30",
+    "twi_q40",
+    "twi_q60",
+    "twi_q70",
+    "twi_q80",
+    "twi_q90",
+    "elevation_mean",
+    "slope250m_mean",
+    "aspect_circmean",
+    "lzfpm_mean",
+    "lzpk_mean",
+    "lztwm_mean",
+    "rexp_mean",
+    "uzk_mean",
+    "zperc_mean",
+    "lzfsm_mean",
+    "lzsk_mean",
+    "pfree_mean",
+    "uzfwm_mean",
+    "uztwm_mean",
+    "mfmin_mean",
+    "mfmax_mean",
+    "uadj_mean",
+    "a_xinanjiang_inflection_point_parameter",
+    "b_xinanjiang_shape_parameter",
+    "x_xinanjiang_shape_parameter",
+    "temp_delta_jan_mean",
+    "temp_delta_feb_mean",
+    "temp_delta_mar_mean",
+    "temp_delta_apr_mean",
+    "temp_delta_may_mean",
+    "temp_delta_jun_mean",
+    "temp_delta_jul_mean",
+    "temp_delta_aug_mean",
+    "temp_delta_sep_mean",
+    "temp_delta_oct_mean",
+    "temp_delta_nov_mean",
+    "temp_delta_dec_mean",
+    "lat",
+    "lon",
+    "glacier_percent",
+    "cgw",
+    "expon",
+    "max_gw_storage"
+  ],
+  "title": "Divides",
+  "type": "object"
+}

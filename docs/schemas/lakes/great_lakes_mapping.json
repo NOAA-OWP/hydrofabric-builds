@@ -1,0 +1,72 @@
+{
+  "description": "Defines parameters about a Great Lake",
+  "properties": {
+    "lake_id": {
+      "description": "lake_id/NHD 2.2 COMID for Great Lake",
+      "title": "Lake Id",
+      "type": "string"
+    },
+    "fp_id": {
+      "description": "NHF flowpath ID for Great Lake",
+      "title": "Fp Id",
+      "type": "number"
+    },
+    "virtual_fp_id": {
+      "description": "NHF virtual flowpath ID for Great Lake",
+      "title": "Virtual Fp Id",
+      "type": "number"
+    },
+    "site_no": {
+      "description": "Gage ID / site_no for Great Lake",
+      "title": "Site No",
+      "type": "string"
+    },
+    "lat": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Add a manual latitude if needed to place gage",
+      "title": "Lat"
+    },
+    "lon": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Add a manual longitude if needed to place gage",
+      "title": "Lon"
+    },
+    "data_source": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Data source of gage",
+      "title": "Data Source"
+    }
+  },
+  "required": [
+    "lake_id",
+    "fp_id",
+    "virtual_fp_id",
+    "site_no"
+  ],
+  "title": "GreatLake",
+  "type": "object"
+}

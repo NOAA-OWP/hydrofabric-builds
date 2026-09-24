@@ -1,0 +1,31 @@
+{
+  "description": "Lakes: Adhoc lakes have been mapped to COMID, site_no (gage), and dam_id (reference reservoirs) when possible. Adhoc lakes that are only in reference waterbodies are flagged to force inclusion.",
+  "properties": {
+    "path": {
+      "default": "input/adhoc_lakes.gpkg",
+      "description": "Source path. LakesConfig will inject preceding input path.",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "layer": {
+      "default": "adhoc_lakes",
+      "title": "Layer",
+      "type": "string"
+    },
+    "run": {
+      "default": true,
+      "description": "Flag to run Adhoc Lake input. Must be set to false if file is not present.",
+      "title": "Run",
+      "type": "boolean"
+    },
+    "ref_wb_field": {
+      "default": "ref_waterbodies_only",
+      "description": "Field in the adhoc lakes table that flags if a lake is only in the reference waterbodies dataset (not in NWM lakes)",
+      "title": "Ref Wb Field",
+      "type": "string"
+    }
+  },
+  "title": "AdhocLakeInput",
+  "type": "object"
+}

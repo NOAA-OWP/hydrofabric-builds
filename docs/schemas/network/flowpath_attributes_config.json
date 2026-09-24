@@ -1,0 +1,207 @@
+{
+  "description": "Flowpath attributes model to configure and calculate attributes\n\nDefaults from WRF GIS Preprocessor\nSource: https://github.com/NCAR/wrf_hydro_gis_preprocessor/blob/5781ad4788434e8fd4ec16f3a3805d98536a9f82/wrfhydro_gis/wrfhydro_functions.py#L128\nAccessed 10/20/25",
+  "properties": {
+    "use_stream_order": {
+      "default": true,
+      "description": "Setting to use stream order to calculate Manning's n (n), Bottom Width (BtmWdth), and Channel side slope (ChSlp). When true, calculate these attributes from stream order. When false, use defaults.",
+      "title": "Stream Order Setting",
+      "type": "boolean"
+    },
+    "stream_order": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Strahler Stream Order 1-10",
+      "title": "Strahler Stream Order"
+    },
+    "total_da_sqkm": {
+      "description": "Drainage area (sqkm) from flowpaths",
+      "title": "Drainage Area (km2)",
+      "type": "number"
+    },
+    "Y": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Estimated depth associated with TopWdth (m)",
+      "title": "Estimated Depth"
+    },
+    "r": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Dingmans's r",
+      "title": "Dingman's r"
+    },
+    "n": {
+      "default": 0.035,
+      "description": "Manning's in channel roughness / n. Can be derived from Strahler stream order. Defaults to 0.035 without stream order",
+      "title": "Mannning's in channel roughness",
+      "type": "number"
+    },
+    "nCC": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Compound Channel Top Width (m). 2*n",
+      "title": "Compound Channel Top Width"
+    },
+    "BtmWdth": {
+      "default": 5,
+      "description": "Bottom width of channel (m). Can be derived from Strahler stream order. Defaults to 5 without stream order",
+      "title": "Bottom width of channel",
+      "type": "number"
+    },
+    "TopWdth": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Top Width (m)",
+      "title": "Top Width"
+    },
+    "TopWdthCC": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Compound Channel Top Width (m)",
+      "title": "Compound Channel Top Width"
+    },
+    "ChSlp": {
+      "default": 0.05,
+      "description": "Channel side slope. Can be derived from Strahler stream order. Defaults to 0.05 without stream order.",
+      "title": "Channel Side Slope",
+      "type": "number"
+    },
+    "alt": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Mean elevation (m) between nodes from 3DEP",
+      "title": "Elevation"
+    },
+    "So": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Slope (meters/meters) computed from 3DEP",
+      "title": "Slope"
+    },
+    "MusX": {
+      "default": 0.2,
+      "description": "Muskingum Weighting Coefficient. Defaults to 0.2",
+      "title": "Muskingum Weighting Coeffiecent",
+      "type": "number"
+    },
+    "MusK": {
+      "default": 3600,
+      "description": "Muskingum routing time (seconds). Defaults to 3600",
+      "title": "Muskingum routing time",
+      "type": "number"
+    },
+    "Y_ml": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Estimated depth associated with TopWdth (m) calculated from RiverML",
+      "title": "Estimated Depth ML"
+    },
+    "r_ml": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Dingmans's r calculated from RiverML",
+      "title": "Dingman's r ML"
+    },
+    "TopWdth_ml": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Top Width (m) calculated from RiverML",
+      "title": "Top Width ML"
+    },
+    "TopWdthCC_ml": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Compound Channel Top Width (m) calculated from RiverML",
+      "title": "Compound Channel Top Width ML"
+    }
+  },
+  "required": [
+    "total_da_sqkm"
+  ],
+  "title": "FlowpathAttributesConfig",
+  "type": "object"
+}

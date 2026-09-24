@@ -1,0 +1,58 @@
+{
+  "description": "gages: a class for assigning flowpaths to gages",
+  "properties": {
+    "rel_err": {
+      "default": 0.25,
+      "title": "Rel Err",
+      "type": "number"
+    },
+    "buffer_m": {
+      "default": 500.0,
+      "title": "Buffer M",
+      "type": "number"
+    },
+    "parallel": {
+      "default": false,
+      "title": "Parallel",
+      "type": "boolean"
+    },
+    "max_workers": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Max Workers"
+    },
+    "USGS_NLDI_crs": {
+      "default": "EPSG:4326",
+      "title": "Usgs Nldi Crs",
+      "type": "string"
+    },
+    "work_crs": {
+      "default": "EPSG:5070",
+      "title": "Work Crs",
+      "type": "string"
+    },
+    "override_fp_path": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "A csv with columns `site_no`, `fp_id`, and `virtual_fp_id` to override algorithmically chosen flowpath associations",
+      "title": "Override Fp Path"
+    }
+  },
+  "title": "AssignFPConfig",
+  "type": "object"
+}

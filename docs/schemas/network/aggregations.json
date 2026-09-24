@@ -1,0 +1,59 @@
+{
+  "description": "A Pydantic BaseModel Container to contain flowpath_id classifications for aggregation",
+  "properties": {
+    "aggregates": {
+      "description": "A list of geometries for aggreagated flowpaths and divides along with upstream and downstream identifiers",
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Aggregates",
+      "type": "array"
+    },
+    "independents": {
+      "description": "A list of independent segments and their geometries",
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Independents",
+      "type": "array"
+    },
+    "non_nextgen_flowpaths": {
+      "description": "A list of virtual flowpaths and their geometries",
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Non Nextgen Flowpaths",
+      "type": "array"
+    },
+    "connectors": {
+      "description": "A list of connection segments and their geometries",
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Connectors",
+      "type": "array"
+    },
+    "non_nextgen_virtual_flowpaths": {
+      "description": "A list of all non_nextgen virtual flowpaths and their geometries",
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Non Nextgen Virtual Flowpaths",
+      "type": "array"
+    }
+  },
+  "required": [
+    "aggregates",
+    "independents",
+    "non_nextgen_flowpaths",
+    "connectors",
+    "non_nextgen_virtual_flowpaths"
+  ],
+  "title": "Aggregations",
+  "type": "object"
+}

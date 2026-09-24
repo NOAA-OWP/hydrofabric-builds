@@ -77,9 +77,7 @@ def main(cfg: dict) -> None:
         g1_chunk = g1_chunk.to_crs(equal_area_crs)
 
         # keep only needed columns
-        g1_chunk = g1_chunk[[name1_col, "geometry"]].rename(
-            columns={name1_col: "p1_name"}
-        )
+        g1_chunk = g1_chunk[[name1_col, "geometry"]].rename(columns={name1_col: "p1_name"})
         g1_chunk["p1_area"] = g1_chunk.geometry.area
 
         if g1_chunk.empty:
@@ -140,9 +138,7 @@ def main(cfg: dict) -> None:
 
 def parse_args() -> argparse.Namespace:
     """Config file parser"""
-    parser = argparse.ArgumentParser(
-        description="Compute polygon overlap percentages into a nested dict."
-    )
+    parser = argparse.ArgumentParser(description="Compute polygon overlap percentages into a nested dict.")
     parser.add_argument(
         "--config",
         "-c",

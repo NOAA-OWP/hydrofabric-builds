@@ -1,0 +1,31 @@
+{
+  "description": "Lakes: USBR lakes are mapped to COMID/lake_id. Add USBR lakes from reference reservoirs when not included in nwm lakes.",
+  "properties": {
+    "path": {
+      "default": "input/usbr_lake_crosswalk.gpkg",
+      "description": "Source path. LakesConfig will inject preceding input path.",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "layer": {
+      "default": "usbr_lake_crosswalk",
+      "title": "Layer",
+      "type": "string"
+    },
+    "run": {
+      "default": true,
+      "description": "Flag to run USBR Lake input. Must be set to false if file is not present.",
+      "title": "Run",
+      "type": "boolean"
+    },
+    "ref_wb_field": {
+      "default": "ref_wb_lake",
+      "description": "Field in the USBR table that flags if a lake is only in the reference waterbodies dataset (not in NWM lakes)",
+      "title": "Ref Wb Field",
+      "type": "string"
+    }
+  },
+  "title": "USBRLakeInput",
+  "type": "object"
+}

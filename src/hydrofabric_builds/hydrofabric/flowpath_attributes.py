@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 import logging
 import os
+from typing import Any
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import polars as pl
 import rasterio
-from shapely import force_2d, get_point
-from shapely.geometry import Point
+from shapely import force_2d
 
 from hydrofabric_builds.schemas.hydrofabric import (
     FlowpathAttributesConfig,
@@ -17,6 +19,67 @@ from hydrofabric_builds.schemas.hydrofabric import (
 logger = logging.getLogger(__name__)
 
 
+def _compute_geom_attributes(geom: Any, elev_dict: dict, min_slope: float) -> pd.Series:
+    if geom.geom_type == "LineString":
+        p1, p2 = geom.coords[0], geom.coords[-1]
+        e1_: Any | None = elev_dict.get(p1)
+        e2_: Any | None = elev_dict.get(p2)
+
+        valid_elevs = [float(e) for e in (e1_, e2_) if e is not None and pd.notnull(e)]
+        mean_elev = np.mean(valid_elevs) if valid_elevs else np.nan
+
+        # native distance calc faster than shapely
+        dist = ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
+
+        if e1_ is not None and e2_ is not None and pd.notnull(e1_) and pd.notnull(e2_) and dist > 0:
+            slope = max(abs(e2_ - e1_) / dist, min_slope)
+        else:
+            slope = np.nan
+
+        return pd.Series([mean_elev, slope], index=["mean_elevation", "slope"])
+
+    elif geom.geom_type == "MultiLineString":
+        endpoints = []
+        degree: dict[tuple[float, float], int] = {}
+        for line in geom.geoms:
+            p1, p2 = line.coords[0], line.coords[-1]
+            endpoints.extend([p1, p2])
+            degree[p1] = degree.get(p1, 0) + 1
+            degree[p2] = degree.get(p2, 0) + 1
+
+        elevs = [elev_dict.get(pt) for pt in endpoints]
+        valid_elevs = [float(e) for e in elevs if e is not None and pd.notnull(e)]
+        mean_elev = np.mean(valid_elevs) if valid_elevs else np.nan
+
+        # Extract endpoints using degree-1 criterion
+        candidates = [pt for pt, deg in degree.items() if deg == 1] or list(degree.keys())
+
+        # Find furthest pair distance to act as the main stem's dx
+        max_dist = -1
+        best_pair = (candidates[0], candidates[0])
+        for i in range(len(candidates)):
+            for j in range(i + 1, len(candidates)):
+                d = (
+                    (candidates[i][0] - candidates[j][0]) ** 2 + (candidates[i][1] - candidates[j][1]) ** 2
+                ) ** 0.5
+                if d > max_dist:
+                    max_dist, best_pair = d, (candidates[i], candidates[j])
+
+        p1, p2 = best_pair
+        e1: Any | None = elev_dict.get(p1)
+        e2: Any | None = elev_dict.get(p2)
+
+        if e1 is not None and e2 is not None and pd.notnull(e1) and pd.notnull(e2) and max_dist > 0:
+            slope = max(abs(e2 - e1) / max_dist, min_slope)
+        else:
+            slope = np.nan
+
+        return pd.Series([mean_elev, slope], index=["mean_elevation", "slope"])
+
+    else:
+        return pd.Series([np.nan, np.nan], index=["mean_elevation", "slope"])
+
+
 def _dem_attributes(model_cfg: FlowpathAttributesModelConfig, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Derive DEM-based attributes (slope, mean_elevation)
 
@@ -24,7 +87,7 @@ def _dem_attributes(model_cfg: FlowpathAttributesModelConfig, gdf: gpd.GeoDataFr
     Slope is calculated as the absolute value of dz / dx (distance)
     Mean elevation is calculated as the mean of linestring start and end point
     Linestrings are converted to multistring when possible.
-    Multilinestrings take mean of all points and slope of maximum length segment.
+    Multilinestrings take mean of all points and slope of computed using the start and end points of the multi-line.
 
     Parameters
     ----------
@@ -38,38 +101,26 @@ def _dem_attributes(model_cfg: FlowpathAttributesModelConfig, gdf: gpd.GeoDataFr
     gpd.GeoDataFrame
         Flowpaths GeoDataFrame including slope and mean_elevation
     """
-    # Assure lines are linestrings and not multi
     gdf["geometry"] = gdf["geometry"].line_merge()
-    gdf["geometry"] = gdf.apply(lambda x: force_2d(x["geometry"]), axis=1)
+    gdf["geometry"] = gdf.geometry.apply(force_2d)
 
-    gdf_ls = gdf.loc[gdf.geometry.geometry.type == "LineString", [model_cfg.flowpath_id, "geometry"]].copy()
-    gdf_mls = gdf.loc[
-        gdf.geometry.geometry.type == "MultiLineString", [model_cfg.flowpath_id, "geometry"]
-    ].copy()
-    mls_exists = gdf_mls.shape[0]
-    logger.info(f"Multilinestrings found - {mls_exists}")
+    mls_count = (gdf.geometry.type == "MultiLineString").sum()
+    if mls_count > 0:
+        logger.info(f"Multilinestrings found - {mls_count}")
 
-    # Retrieve sorted set of linestring start and end points
-    gdf_ls["point_1"] = get_point(gdf.geometry, 0)
-    gdf_ls["point_2"] = get_point(gdf.geometry, -1)
-    coords_starts = [(x, y) for x, y in zip(gdf_ls["point_1"].x, gdf_ls["point_1"].y, strict=False)]
-    coords_ends = [(x, y) for x, y in zip(gdf_ls["point_2"].x, gdf_ls["point_2"].y, strict=False)]
+    # Collect line endpoint coords
+    coords_to_sample = set()
+    for geom in gdf.geometry:
+        if geom.geom_type == "LineString":
+            coords_to_sample.update([geom.coords[0], geom.coords[-1]])
+        elif geom.geom_type == "MultiLineString":
+            for line in geom.geoms:
+                coords_to_sample.update([line.coords[0], line.coords[-1]])
 
-    set_coords = set(coords_starts + coords_ends)
-
-    # handle multilinestring
-    if mls_exists:
-        gdf_mls = gdf_mls.explode().reset_index(drop=True)
-        gdf_mls["point_1"] = get_point(gdf_mls.geometry, 0)
-        gdf_mls["point_2"] = get_point(gdf_mls.geometry, -1)
-        coords_starts_mls = [(x, y) for x, y in zip(gdf_mls["point_1"].x, gdf_mls["point_1"].y, strict=False)]
-        coords_ends_mls = [(x, y) for x, y in zip(gdf_mls["point_2"].x, gdf_mls["point_2"].y, strict=False)]
-
-        set_coords = set(list(set_coords) + coords_starts_mls + coords_ends_mls)
-
-    sorted = rasterio.sample.sort_xy(set_coords)
+    sorted_coords = rasterio.sample.sort_xy(list(coords_to_sample))
 
     logger.info("Sampling DEM points")
+
     # sample with S3 if needed
     if "s3" in str(model_cfg.dem_path):
         session = rasterio.session.AWSSession(
@@ -77,97 +128,30 @@ def _dem_attributes(model_cfg: FlowpathAttributesModelConfig, gdf: gpd.GeoDataFr
             aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
             aws_session_token=os.environ["AWS_SESSION_TOKEN"],
         )
-
-        with rasterio.Env(session=session) as env:  # noqa: F841
-            with rasterio.open(model_cfg.dem_path, mode="r") as src:
-                points = dict(zip(sorted, [point[0] for point in src.sample(sorted)], strict=False))
+        env = rasterio.Env(session=session)
     else:
+        env = rasterio.Env()
+
+    with env:
         with rasterio.open(model_cfg.dem_path, mode="r") as src:
-            points = dict(zip(sorted, [point[0] for point in src.sample(sorted)], strict=False))
+            samples = src.sample(sorted_coords)
+            elev_dict = {
+                coord: float(val[0]) if val[0] != -999999.0 else np.nan
+                for coord, val in zip(sorted_coords, samples, strict=False)
+            }
 
-    df_points = pd.DataFrame(
-        data={"points": [Point(point) for point in points.keys()], "elev": points.values()}
+    min_slope: float = 1e-5
+
+    # Create attributes for each linestring
+    attrs = pd.DataFrame(
+        [_compute_geom_attributes(geom, elev_dict, min_slope) for geom in gdf.geometry], index=gdf.index
     )
 
-    # LINESTRINGS
-    # --------------
-    # merge the samples back for both start and end point
-    gdf_ls = (
-        gdf_ls.merge(df_points, left_on="point_1", right_on="points", how="left")
-        .rename(columns={"elev": "elev_1"})
-        .drop(columns=["points"])
-        .merge(df_points, left_on="point_2", right_on="points", how="left")
-        .rename(columns={"elev": "elev_2"})
-        .drop(columns=["points"])
-    )
+    gdf["mean_elevation"] = attrs["mean_elevation"]
+    gdf["slope"] = attrs["slope"]
 
-    # distance is dx
-    gdf_ls["distance"] = gpd.GeoSeries(gdf_ls["point_1"]).distance(gpd.GeoSeries(gdf_ls["point_2"]))
-
-    # calculate mean_elevation and slope. Do not allow zero slope
-    gdf_ls["mean_elevation"] = gdf_ls[["elev_1", "elev_2"]].mean(axis=1)
-    gdf_ls["slope"] = abs((gdf_ls["elev_2"] - gdf_ls["elev_1"]) / gdf_ls["distance"])
-    gdf_ls["slope"] = np.where(gdf_ls["slope"] == 0, 1e-4, gdf_ls["slope"])
-    gdf_ls = gdf_ls.drop(columns=["point_1", "point_2", "elev_1", "elev_2", "distance", "geometry"])
-
-    # MULTILINESTRINGS
-    # ----------------
-    if mls_exists:
-        gdf_mls = (
-            gdf_mls.merge(df_points, left_on="point_1", right_on="points", how="left")
-            .rename(columns={"elev": "elev_1"})
-            .drop(columns=["points"])
-            .merge(df_points, left_on="point_2", right_on="points", how="left")
-            .rename(columns={"elev": "elev_2"})
-            .drop(columns=["points"])
-        )
-
-        # get mean of all elevations in flowpath segments
-        gb_sum = gdf_mls.groupby(model_cfg.flowpath_id)[["elev_1", "elev_2"]].sum()
-        gb_count = gdf_mls.groupby(model_cfg.flowpath_id)[["elev_1", "elev_2"]].count()
-
-        gb = pd.DataFrame(
-            pd.Series(
-                ((gb_sum["elev_1"] + gb_sum["elev_2"]) / (gb_count["elev_1"] + gb_count["elev_2"])),
-                name="mean_elevation",
-            )
-        )
-
-        # distance is dx
-        gdf_mls["distance"] = get_point(gdf_mls.geometry, 0).distance(get_point(gdf_mls.geometry, -1))
-
-        # slope: take slope of max length segment - select the segment
-        gdf_mls_max = gdf_mls.groupby(model_cfg.flowpath_id)[["distance"]].max().reset_index(drop=False)
-        gdf_mls_max["use_flag"] = 1
-        gdf_mls = gdf_mls.merge(
-            gdf_mls_max[[model_cfg.flowpath_id, "distance", "use_flag"]],
-            on=[model_cfg.flowpath_id, "distance"],
-            how="left",
-        )
-        gdf_mls = gdf_mls.loc[gdf_mls["use_flag"] == 1].copy()
-
-        gdf_mls["slope"] = abs((gdf_mls["elev_2"] - gdf_mls["elev_1"]) / gdf_mls["distance"])
-        gdf_mls["slope"] = np.where(gdf_mls["slope"] == 0, 1e-4, gdf_mls["slope"])
-
-        gdf_mls = gdf_mls.merge(gb, on=model_cfg.flowpath_id, how="left")
-        gdf_mls = gdf_mls.drop(
-            columns=["point_1", "point_2", "elev_1", "elev_2", "distance", "geometry", "use_flag"]
-        )
-
-        gdf_lsmls = pd.concat([gdf_ls, gdf_mls])
-
-    # merge back to main
-    gdf = (
-        gdf.merge(gdf_lsmls, on=model_cfg.flowpath_id, how="left")
-        if mls_exists
-        else gdf.merge(gdf_ls, on=model_cfg.flowpath_id, how="left")
-    )
-
-    # filter out nulls from missing DEM
-    gdf["mean_elevation"] = np.where(gdf["mean_elevation"] == -999999, np.nan, gdf["mean_elevation"])
-    gdf["slope"] = np.where(gdf["mean_elevation"].isnull(), np.nan, gdf["slope"])
-
-    del df_points, points, gdf_ls
+    # Replace NaN slopes with minimum slope value
+    gdf["slope"] = gdf["slope"].fillna(min_slope)
 
     return gdf
 
@@ -222,13 +206,19 @@ def _riverml_attributes(model_cfg: FlowpathAttributesModelConfig, df: pl.DataFra
     # df_refj has multiple fp_id for 1:many ref_fp_id relationship
     gdf_ref = gpd.read_file(model_cfg.hf_path, layer="reference_flowpaths")
     df_ref = pl.from_pandas(gdf_ref)
-    df_ref = df_ref.cast({pl.Float64: pl.Int64})
+    # Cast fp_id on both sides to Int64 with strict=False to handle any NaN/null values
+    df_ref = df_ref.with_columns(pl.col("fp_id").cast(pl.Int64, strict=False))
+    df = df.with_columns(pl.col("fp_id").cast(pl.Int64, strict=False))
     df_refj = df.join(df_ref, on="fp_id", how="left")
+    # Cast ref_fp_id to Int64 to match parquet predictions; f64 vs i64 mismatch causes join errors
+    df_refj = df_refj.with_columns(pl.col("ref_fp_id").cast(pl.Int64, strict=False))
 
     # join predictions to fp with ref fp and calculate mean for fp_id (multiple ref_fp_id) for each ML field
     if model_cfg.tw_path:
-        df_tw = pl.read_parquet(model_cfg.tw_path).rename(
-            {"FEATUREID": "ref_fp_id", "prediction": "topwdth_ml"}
+        df_tw = (
+            pl.read_parquet(model_cfg.tw_path)
+            .rename({"FEATUREID": "ref_fp_id", "prediction": "topwdth_ml"})
+            .with_columns(pl.col("ref_fp_id").cast(pl.Int64, strict=False))
         )
         df_tmp = df_refj.join(df_tw, on="ref_fp_id", how="full")
         df_meantw = df_tmp[["fp_id", "topwdth_ml"]].group_by("fp_id").mean()
@@ -237,7 +227,11 @@ def _riverml_attributes(model_cfg: FlowpathAttributesModelConfig, df: pl.DataFra
         df_meantw = df_refj[["fp_id"]].unique(keep="first").with_columns(pl.lit(None).alias("topwdth_ml"))
 
     if model_cfg.y_path:
-        df_y = pl.read_parquet(model_cfg.y_path).rename({"FEATUREID": "ref_fp_id", "prediction": "y_ml"})
+        df_y = (
+            pl.read_parquet(model_cfg.y_path)
+            .rename({"FEATUREID": "ref_fp_id", "prediction": "y_ml"})
+            .with_columns(pl.col("ref_fp_id").cast(pl.Int64, strict=False))
+        )
         df_tmp = df_refj.join(df_y, on="ref_fp_id", how="full")
         df_meany = df_tmp[["fp_id", "y_ml"]].group_by("fp_id").mean()
         del df_tmp
@@ -245,7 +239,11 @@ def _riverml_attributes(model_cfg: FlowpathAttributesModelConfig, df: pl.DataFra
         df_meany = df_refj[["fp_id"]].unique(keep="first").with_columns(pl.lit(None).alias("y_ml"))
 
     if model_cfg.r_path:
-        df_r = pl.read_parquet(model_cfg.r_path).rename({"FEATUREID": "ref_fp_id", "prediction": "r_ml"})
+        df_r = (
+            pl.read_parquet(model_cfg.r_path)
+            .rename({"FEATUREID": "ref_fp_id", "prediction": "r_ml"})
+            .with_columns(pl.col("ref_fp_id").cast(pl.Int64, strict=False))
+        )
         df_tmp = df_refj.join(df_r, on="ref_fp_id", how="full")
         df_meanr = df_tmp[["fp_id", "r_ml"]].group_by("fp_id").mean()
         del df_tmp
@@ -299,14 +297,15 @@ def _other_flowpath_attributes(model_cfg: FlowpathAttributesModelConfig, df: pl.
         model = FlowpathAttributesConfig(
             use_stream_order=model_cfg.use_stream_order,
             stream_order=row["stream_order"],
-            topwdth_ml=row["topwdth_ml"],
-            y=row["y"],
+            TopWdth_ml=row["topwdth_ml"],
+            Y=row["y"],
             total_da_sqkm=row["total_da_sqkm"],
         )
-        # exclude attributes already calculated
+
+        # exclude attributes already calculated (validators auto-populate remaining fields)
         models.append(
             model.model_dump(
-                exclude=["use_stream_order", "stream_order", "mean_elevation", "slope", "total_da_sqkm"]
+                exclude={"use_stream_order", "stream_order", "mean_elevation", "slope", "total_da_sqkm"}
             )
         )
 

@@ -1,0 +1,84 @@
+{
+  "description": "gages: gageinput class",
+  "properties": {
+    "dir": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dir"
+    },
+    "path": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Path"
+    },
+    "gage_source_crs": {
+      "default": "EPSG:4326",
+      "title": "Gage Source Crs",
+      "type": "string"
+    },
+    "id_col_name": {
+      "default": "site_no",
+      "title": "Id Col Name",
+      "type": "string"
+    },
+    "x_col_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "X Col Name"
+    },
+    "y_col_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Y Col Name"
+    },
+    "area_col_name": {
+      "default": "area_sqkm",
+      "title": "Area Col Name",
+      "type": "string"
+    },
+    "status_col_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Status Col Name"
+    }
+  },
+  "title": "GageInput",
+  "type": "object"
+}

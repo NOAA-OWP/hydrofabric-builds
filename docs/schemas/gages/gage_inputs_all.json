@@ -1,0 +1,171 @@
+{
+  "$defs": {
+    "GageInput": {
+      "description": "gages: gageinput class",
+      "properties": {
+        "dir": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dir"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "gage_source_crs": {
+          "default": "EPSG:4326",
+          "title": "Gage Source Crs",
+          "type": "string"
+        },
+        "id_col_name": {
+          "default": "site_no",
+          "title": "Id Col Name",
+          "type": "string"
+        },
+        "x_col_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "X Col Name"
+        },
+        "y_col_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Y Col Name"
+        },
+        "area_col_name": {
+          "default": "area_sqkm",
+          "title": "Area Col Name",
+          "type": "string"
+        },
+        "status_col_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Col Name"
+        }
+      },
+      "title": "GageInput",
+      "type": "object"
+    },
+    "NWMRFCInput": {
+      "description": "NWM reservoir index file for retaining RFC and USACE gages. USACE IDs are found in NID.",
+      "properties": {
+        "path": {
+          "default": "rfc/reservoir_index_AnA.nc",
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "rfc_id_col": {
+          "default": "rfc_gage_id",
+          "title": "Rfc Id Col",
+          "type": "string"
+        },
+        "usace_id_col": {
+          "default": "usace_gage_id",
+          "title": "Usace Id Col",
+          "type": "string"
+        }
+      },
+      "title": "NWMRFCInput",
+      "type": "object"
+    }
+  },
+  "description": "gages: configs collection for all inputs",
+  "properties": {
+    "usgs_discontinued": {
+      "$ref": "#/$defs/GageInput"
+    },
+    "usgs_active": {
+      "$ref": "#/$defs/GageInput"
+    },
+    "txdot_gages": {
+      "$ref": "#/$defs/GageInput"
+    },
+    "other": {
+      "$ref": "#/$defs/GageInput"
+    },
+    "CIROH_UA": {
+      "$ref": "#/$defs/GageInput"
+    },
+    "nwm_calib_gages": {
+      "$ref": "#/$defs/GageInput"
+    },
+    "routelink": {
+      "$ref": "#/$defs/GageInput"
+    },
+    "rfc": {
+      "$ref": "#/$defs/GageInput",
+      "description": "Table of active NWS gages. Retrieved from https://water.noaa.gov/about/data-and-web-services-catalog on 6/15/26"
+    },
+    "nid": {
+      "$ref": "#/$defs/GageInput"
+    },
+    "nwm_rfc": {
+      "$ref": "#/$defs/NWMRFCInput",
+      "default": {
+        "path": "rfc/reservoir_index_AnA.nc",
+        "rfc_id_col": "rfc_gage_id",
+        "usace_id_col": "usace_gage_id"
+      },
+      "description": "An NWM v3 reservoid index file with RFC gages to retain"
+    },
+    "adhoc_lakes": {
+      "$ref": "#/$defs/GageInput",
+      "description": "Adhoc lakes from reference waterbodies"
+    },
+    "canada_great_lakes": {
+      "default": false,
+      "description": "Flag to pull Lake Erie and Lake Ontario Canadian gages from GreatLakesMapping class defined in Lakes",
+      "title": "Canada Great Lakes",
+      "type": "boolean"
+    },
+    "usbr": {
+      "$ref": "#/$defs/GageInput",
+      "description": "USBR lakes"
+    },
+    "usace": {
+      "$ref": "#/$defs/GageInput",
+      "description": "USACE gages/reservoirs"
+    }
+  },
+  "title": "GagesInputs",
+  "type": "object"
+}

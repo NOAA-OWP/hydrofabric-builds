@@ -1,0 +1,326 @@
+{
+  "$defs": {
+    "ActiveRFC": {
+      "description": "Describes table of active NWS gages for reservoir DA. This is optionally used in gages.\n\nRetrieved from https://water.noaa.gov/about/data-and-web-services-catalog on 6/15/26",
+      "properties": {
+        "path": {
+          "default": "input/nwps_all_gauges_report.csv",
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "id_field": {
+          "default": "nws shef id",
+          "title": "Id Field",
+          "type": "string"
+        }
+      },
+      "title": "ActiveRFC",
+      "type": "object"
+    },
+    "AdhocResDAInput": {
+      "description": "Adhoc lakes input for reservoir DA. Must include lake_id and an rfc_field with the name of RFC gage.",
+      "properties": {
+        "path": {
+          "default": "input/adhoc_lakes.gpkg",
+          "description": "Source path. ResDAConfig will inject preceding input path.",
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "layer": {
+          "default": "adhoc_lakes",
+          "description": "Layer in adhoc lakes gpkg",
+          "title": "Layer",
+          "type": "string"
+        },
+        "run": {
+          "default": false,
+          "description": "Flag to use Adhoc Lake input. Must be set to false if file is not present.",
+          "title": "Run",
+          "type": "boolean"
+        },
+        "rfc_field": {
+          "default": "locationId",
+          "description": "Field containing RFC gage ID",
+          "title": "Rfc Field",
+          "type": "string"
+        },
+        "lake_id_field": {
+          "default": "lake_id",
+          "description": "Field containing common lake COMID",
+          "title": "Lake Id Field",
+          "type": "string"
+        },
+        "null_value": {
+          "default": -99999,
+          "description": "Missing data value",
+          "title": "Null Value",
+          "type": "integer"
+        }
+      },
+      "title": "AdhocResDAInput",
+      "type": "object"
+    },
+    "ResCrossWalkInput": {
+      "description": "Reservoir crosswalk file (\"reservoir_index_AnA.netcdf\")",
+      "properties": {
+        "path": {
+          "default": "input/reservoir_index_AnA.nc",
+          "description": "File with reservoir crosswalks for USGS, USACE, RFC",
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "fields": {
+          "$ref": "#/$defs/ResCrosswalkFields",
+          "default": {
+            "lake_id_field": "lake_id",
+            "usgs_gage_id_field": "usgs_gage_id",
+            "usgs_lake_id_field": "usgs_lake_id",
+            "usace_gage_id_field": "usace_gage_id",
+            "usace_lake_id_field": "usace_lake_id",
+            "rfc_gage_id_field": "rfc_gage_id",
+            "rfc_lake_id_field": "rfc_lake_id"
+          },
+          "description": "All field mappings for reservoir index file"
+        }
+      },
+      "title": "ResCrossWalkInput",
+      "type": "object"
+    },
+    "ResCrosswalkFields": {
+      "description": "Fields in reservoir DA crosswalk file (\"reservoir_index_AnA.netcdf).\n\nThese can be changed in config file if needed and will be input read index functions.",
+      "properties": {
+        "lake_id_field": {
+          "default": "lake_id",
+          "description": "Lake ID field in Res ANA index file",
+          "title": "Lake Id Field",
+          "type": "string"
+        },
+        "usgs_gage_id_field": {
+          "default": "usgs_gage_id",
+          "description": "USGS gage ID field in reservoir index file",
+          "title": "Usgs Gage Id Field",
+          "type": "string"
+        },
+        "usgs_lake_id_field": {
+          "default": "usgs_lake_id",
+          "description": "USGS lake ID field in reservoir index file",
+          "title": "Usgs Lake Id Field",
+          "type": "string"
+        },
+        "usace_gage_id_field": {
+          "default": "usace_gage_id",
+          "description": "USACE gage ID field in reservoir index file",
+          "title": "Usace Gage Id Field",
+          "type": "string"
+        },
+        "usace_lake_id_field": {
+          "default": "usace_lake_id",
+          "description": "USACE lake ID field in reservoir index file",
+          "title": "Usace Lake Id Field",
+          "type": "string"
+        },
+        "rfc_gage_id_field": {
+          "default": "rfc_gage_id",
+          "description": "RFC gage ID in reservoir index",
+          "title": "Rfc Gage Id Field",
+          "type": "string"
+        },
+        "rfc_lake_id_field": {
+          "default": "rfc_lake_id",
+          "description": "RFC lake ID in reservoir index",
+          "title": "Rfc Lake Id Field",
+          "type": "string"
+        }
+      },
+      "title": "ResCrosswalkFields",
+      "type": "object"
+    },
+    "USACEResDAInput": {
+      "description": "USACE : lake_id crosswalk for reservoir DA.",
+      "properties": {
+        "path": {
+          "default": "input/usace_crosswalk.gpkg",
+          "description": "Source path. ResDAConfig will inject preceding input path.",
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "run": {
+          "default": false,
+          "description": "Flag to use USACE reservoir input. Must be set to false if file is not present.",
+          "title": "Run",
+          "type": "boolean"
+        },
+        "lake_id_field": {
+          "default": "lake_id",
+          "description": "Field containing common lake COMID",
+          "title": "Lake Id Field",
+          "type": "string"
+        },
+        "id_field": {
+          "default": "location",
+          "description": "Field containing shared reservoir/gage ID.",
+          "title": "Id Field",
+          "type": "string"
+        }
+      },
+      "title": "USACEResDAInput",
+      "type": "object"
+    },
+    "USBRResDAInput": {
+      "description": "USBR : lake_id crosswalk for reservoir DA.",
+      "properties": {
+        "path": {
+          "default": "input/usbr_lake_crosswalk.gpkg",
+          "description": "Source path. ResDAConfig will inject preceding input path.",
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "run": {
+          "default": false,
+          "description": "Flag to use USBR reservoir input. Must be set to false if file is not present.",
+          "title": "Run",
+          "type": "boolean"
+        },
+        "lake_id_field": {
+          "default": "lake_id",
+          "description": "Field containing common lake COMID",
+          "title": "Lake Id Field",
+          "type": "string"
+        },
+        "id_field": {
+          "default": "locId",
+          "description": "Field containing shared reservoir/gage ID.",
+          "title": "Id Field",
+          "type": "string"
+        }
+      },
+      "title": "USBRResDAInput",
+      "type": "object"
+    }
+  },
+  "description": "Configuration for reservoir DA",
+  "properties": {
+    "input_dir": {
+      "default": "/mnt/share/projects/hydro/code/nhf-builds2/nhf-builds/data/lakes",
+      "description": "Input directory. This will be prepended to all paths for other inputs",
+      "format": "path",
+      "title": "Input Dir",
+      "type": "string"
+    },
+    "all_level_pool": {
+      "default": false,
+      "description": "Flag to make all reservoirs level pool. This can be used in domains with no lake-gage crosswalk available.",
+      "title": "All Level Pool",
+      "type": "boolean"
+    },
+    "adhoc": {
+      "$ref": "#/$defs/AdhocResDAInput",
+      "default": {
+        "path": "input/adhoc_lakes.gpkg",
+        "layer": "adhoc_lakes",
+        "run": false,
+        "rfc_field": "locationId",
+        "lake_id_field": "lake_id",
+        "null_value": -99999
+      },
+      "description": "All Adhoc Lakes Input configs. Adhoc lakes have been mapped to COMID/lake_id, site_no (gage), and dam_id (reference reservoirs) when possible."
+    },
+    "lake_id_field": {
+      "default": "lake_id",
+      "description": "The common name of 'comid' field that is present in various datasets",
+      "title": "Lake Id Field",
+      "type": "string"
+    },
+    "gage_id_field": {
+      "default": "site_no",
+      "description": "Name for output gage ID field",
+      "title": "Gage Id Field",
+      "type": "string"
+    },
+    "da_type_field": {
+      "default": "da_type",
+      "description": "Name for output reservoir DA type field",
+      "title": "Da Type Field",
+      "type": "string"
+    },
+    "res_crosswalk": {
+      "$ref": "#/$defs/ResCrossWalkInput",
+      "default": {
+        "path": "input/reservoir_index_AnA.nc",
+        "fields": {
+          "lake_id_field": "lake_id",
+          "rfc_gage_id_field": "rfc_gage_id",
+          "rfc_lake_id_field": "rfc_lake_id",
+          "usace_gage_id_field": "usace_gage_id",
+          "usace_lake_id_field": "usace_lake_id",
+          "usgs_gage_id_field": "usgs_gage_id",
+          "usgs_lake_id_field": "usgs_lake_id"
+        }
+      },
+      "description": "Data for the gage-lake crosswalk"
+    },
+    "great_lakes": {
+      "default": false,
+      "description": "Flag to add the Great Lakes mappings to the dataframe",
+      "title": "Great Lakes",
+      "type": "boolean"
+    },
+    "generate_additional_crosswalk": {
+      "default": false,
+      "description": "Flag to generate lake:gage crosswalks for lakes without RFC or gage information.",
+      "title": "Generate Additional Crosswalk",
+      "type": "boolean"
+    },
+    "active_rfc": {
+      "$ref": "#/$defs/ActiveRFC",
+      "default": {
+        "path": "input/nwps_all_gauges_report.csv",
+        "id_field": "nws shef id"
+      },
+      "description": "Table of active NWS gages used to filter NWM reservoir index."
+    },
+    "usace": {
+      "$ref": "#/$defs/USACEResDAInput",
+      "default": {
+        "path": "input/usace_crosswalk.gpkg",
+        "run": false,
+        "lake_id_field": "lake_id",
+        "id_field": "location"
+      },
+      "description": "Crosswalked table of USACE reservoir/gages to lake_id."
+    },
+    "usbr": {
+      "$ref": "#/$defs/USBRResDAInput",
+      "default": {
+        "path": "input/usbr_lake_crosswalk.gpkg",
+        "run": false,
+        "lake_id_field": "lake_id",
+        "id_field": "locId"
+      },
+      "description": "Crosswalked table of USBR reservoir/gages to lake_id."
+    },
+    "usgs_fix_list": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "List of USGS site_no in the reservoir index that are missing a leading 0. These values will have 0 prepended during the pipeline.",
+      "title": "Usgs Fix List"
+    }
+  },
+  "title": "ResDAConfig",
+  "type": "object"
+}

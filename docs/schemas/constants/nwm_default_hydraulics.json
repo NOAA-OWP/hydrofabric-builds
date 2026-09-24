@@ -1,0 +1,10 @@
+{
+  "class_name": "NWMDefaultHydraulics",
+  "values": {
+    "WeirC": 0.4,
+    "WeirL": 10.0,
+    "OrificeC": 0.1,
+    "OrificeA": 1.0,
+    "ifd": 0.899
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "description": "gages: for getting the upstream basins from NLDI USGS API",
+  "properties": {
+    "run_NLDI_upstream_basins": {
+      "default": false,
+      "title": "Run Nldi Upstream Basins",
+      "type": "boolean"
+    },
+    "path": {
+      "default": "nldi_upstream_basins.gpkg",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "layer_polys": {
+      "default": "NLDI_upstream_basins",
+      "title": "Layer Polys",
+      "type": "string"
+    },
+    "layer_points": {
+      "default": "sites",
+      "title": "Layer Points",
+      "type": "string"
+    }
+  },
+  "title": "NLDIUpstreamBasins",
+  "type": "object"
+}

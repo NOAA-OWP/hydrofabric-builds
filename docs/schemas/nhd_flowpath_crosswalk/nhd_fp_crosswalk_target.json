@@ -1,0 +1,23 @@
+{
+  "description": "fp_crosswalk: target (file2) network",
+  "properties": {
+    "path": {
+      "default": "data/nwm_flows.gpkg",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "layer": {
+      "default": "nwm_streams",
+      "title": "Layer",
+      "type": "string"
+    },
+    "id_col": {
+      "default": "ID",
+      "title": "Id Col",
+      "type": "string"
+    }
+  },
+  "title": "FPCrosswalkTarget",
+  "type": "object"
+}

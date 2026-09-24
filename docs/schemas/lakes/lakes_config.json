@@ -1,0 +1,129 @@
+{
+  "$defs": {
+    "GreatLake": {
+      "description": "Defines parameters about a Great Lake",
+      "properties": {
+        "lake_id": {
+          "description": "lake_id/NHD 2.2 COMID for Great Lake",
+          "title": "Lake Id",
+          "type": "string"
+        },
+        "fp_id": {
+          "description": "NHF flowpath ID for Great Lake",
+          "title": "Fp Id",
+          "type": "number"
+        },
+        "virtual_fp_id": {
+          "description": "NHF virtual flowpath ID for Great Lake",
+          "title": "Virtual Fp Id",
+          "type": "number"
+        },
+        "site_no": {
+          "description": "Gage ID / site_no for Great Lake",
+          "title": "Site No",
+          "type": "string"
+        },
+        "lat": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Add a manual latitude if needed to place gage",
+          "title": "Lat"
+        },
+        "lon": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Add a manual longitude if needed to place gage",
+          "title": "Lon"
+        },
+        "data_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Data source of gage",
+          "title": "Data Source"
+        }
+      },
+      "required": [
+        "lake_id",
+        "fp_id",
+        "virtual_fp_id",
+        "site_no"
+      ],
+      "title": "GreatLake",
+      "type": "object"
+    }
+  },
+  "description": "All Great Lakes mappings",
+  "properties": {
+    "superior": {
+      "$ref": "#/$defs/GreatLake",
+      "default": {
+        "lake_id": "4800002",
+        "fp_id": 1278348162056612.0,
+        "virtual_fp_id": 1278346877373953.0,
+        "site_no": "04127885",
+        "lat": null,
+        "lon": null,
+        "data_source": "USGS"
+      }
+    },
+    "mi_huron": {
+      "$ref": "#/$defs/GreatLake",
+      "default": {
+        "lake_id": "4800004",
+        "fp_id": 1276364270499315.0,
+        "virtual_fp_id": 1276364270423160.0,
+        "site_no": "04159130",
+        "lat": null,
+        "lon": null,
+        "data_source": "USGS"
+      }
+    },
+    "erie": {
+      "$ref": "#/$defs/GreatLake",
+      "default": {
+        "lake_id": "4800006",
+        "fp_id": 1286192735893685.0,
+        "virtual_fp_id": 1286154743979494.0,
+        "site_no": "02HA013",
+        "lat": 42.93028,
+        "lon": -78.91417,
+        "data_source": "Environment Canada: https://wateroffice.ec.gc.ca/report/real_time_e.html?stn=02HA013"
+      }
+    },
+    "ontario": {
+      "$ref": "#/$defs/GreatLake",
+      "default": {
+        "lake_id": "4800007",
+        "fp_id": 1287248237297035.0,
+        "virtual_fp_id": 1287248166320950.0,
+        "site_no": "IJC",
+        "lat": 45.00639,
+        "lon": -74.795,
+        "data_source": "International Lake Ontario-St. Lawrence River Board: https://ijc.org/en/loslrb/watershed/outflow-changes"
+      }
+    }
+  },
+  "title": "GreatLakesMapping",
+  "type": "object"
+}

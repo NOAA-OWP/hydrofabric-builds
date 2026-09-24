@@ -1,0 +1,82 @@
+{
+  "description": "A Pydantic BaseModel Container to contain flowpath_id classifications for aggregation",
+  "properties": {
+    "aggregation_pairs": {
+      "description": "A list of tuples for flowpaths to be aggregated together. Format: (downstream_id, upstream_id, ...) where downstream merges into upstream",
+      "items": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Aggregation Pairs",
+      "type": "array"
+    },
+    "non_nextgen_flowpaths": {
+      "description": "Reference flowpaths classified as 'virtual' tributaries. These are flowpaths that are stream-order 1, with a total DA of < threshold where routing will not be run",
+      "items": {
+        "type": "string"
+      },
+      "title": "Non Nextgen Flowpaths",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "independent_flowpaths": {
+      "description": "Flowpaths that remain independent and are NOT aggregated. These are large catchments (areasqkm > threshold) that form their own divides",
+      "items": {
+        "type": "string"
+      },
+      "title": "Independent Flowpaths",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "connector_segments": {
+      "description": "Small flowpaths (areasqkm < threshold) that connect two higher-order streams. These have two upstream flowpaths where both have streamorder > 1. They remain independent despite being small because they serve as connectors between large stream branches, and aggregation would present inconsistencies within routing",
+      "items": {
+        "type": "string"
+      },
+      "title": "Connector Segments",
+      "type": "array"
+    },
+    "non_nextgen_virtual_flowpath_pairs": {
+      "description": "List of non-NextGen virtual flowpath pairs (source_id, target_id).",
+      "items": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Non Nextgen Virtual Flowpath Pairs",
+      "type": "array"
+    },
+    "processed_flowpaths": {
+      "description": "Set of all flowpath IDs that have been processed during the outlet upstream tracing. Used internally to prevent re-processing flowpaths by mistake (which creates cycles)",
+      "items": {
+        "type": "string"
+      },
+      "title": "Processed Flowpaths",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "force_queue_flowpaths": {
+      "description": "flowpaths that are required to be queued. These are only for streams deeply nested in no-divide connectors",
+      "items": {
+        "type": "string"
+      },
+      "title": "Force Queue Flowpaths",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "aggregation_set": {
+      "description": "A set flowpaths that have been aggregated together",
+      "items": {
+        "type": "string"
+      },
+      "title": "Aggregation Set",
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "title": "Classifications",
+  "type": "object"
+}

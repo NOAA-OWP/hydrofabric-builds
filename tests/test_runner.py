@@ -512,35 +512,38 @@ class TestIntegration:
                 fp_id = graph[node_idx]
                 current_mainstem = fp_dict[fp_id]["mainstem_lp"]
 
-                # Get path lengths of all upstream segments
+                # Get stream order and drainage area of all upstream segments
                 upstream_paths = [
                     (
                         graph[src_idx],
-                        fp_dict[graph[src_idx]]["path_length"],
+                        fp_dict[graph[src_idx]]["stream_order"],
+                        fp_dict[graph[src_idx]]["total_da_sqkm"],
                         fp_dict[graph[src_idx]]["mainstem_lp"],
                     )
                     for src_idx, _, _ in in_edges
                 ]
 
-                # The upstream with longest path should determine the mainstem
-                longest_upstream_id, longest_path, longest_mainstem = max(upstream_paths, key=lambda x: x[1])
+                # The upstream with highest stream order (then largest drainage area) should determine the mainstem
+                chosen_upstream_id, chosen_order, chosen_da, chosen_mainstem = max(
+                    upstream_paths, key=lambda x: (x[1], x[2])
+                )
 
                 # Either:
-                # 1. The longest upstream continues the current mainstem (longest_mainstem == current_mainstem)
-                # 2. OR the current node is where the longest tributary joins (forming new mainstem)
-                # The key is: the upstream with LONGEST path should influence mainstem assignment
+                # 1. The chosen upstream continues the current mainstem (chosen_mainstem == current_mainstem)
+                # 2. OR the current node is where the chosen tributary joins (forming new mainstem)
+                # The key is: the upstream with HIGHEST STREAM ORDER should influence mainstem assignment
 
                 # Verify that if all upstreams are on different mainstems, we made a choice
-                upstream_mainstems = [ms for _, _, ms in upstream_paths]
+                upstream_mainstems = [ms for _, _, _, ms in upstream_paths]
 
                 if len(set(upstream_mainstems)) > 1:
-                    # Multiple mainstems joining - verify the longest one continues or current is new
+                    # Multiple mainstems joining - verify the chosen one continues or current is new
                     assert (
-                        current_mainstem == longest_mainstem or current_mainstem not in upstream_mainstems
+                        current_mainstem == chosen_mainstem or current_mainstem not in upstream_mainstems
                     ), (
                         f"At confluence fp_id={fp_id}, current mainstem {current_mainstem} doesn't match "
-                        f"longest upstream mainstem {longest_mainstem} (path={longest_path}), and current "
-                        f"is not a new mainstem. Upstream mainstems: {upstream_mainstems}"
+                        f"chosen upstream mainstem {chosen_mainstem} (order={chosen_order}, da={chosen_da:.3f}), "
+                        f"and current is not a new mainstem. Upstream mainstems: {upstream_mainstems}"
                     )
 
         # Verify we actually tested confluence logic (should have at least 1 confluence)

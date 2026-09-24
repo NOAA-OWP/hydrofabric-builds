@@ -1,0 +1,58 @@
+{
+  "$defs": {
+    "AggTypeEnum": {
+      "description": "Zonal statistics aggregation types",
+      "enum": [
+        "mean",
+        "mode",
+        "max",
+        "weighted_circular_mean",
+        "quantile_dist",
+        "quartile_dist",
+        "weighted_geometric_mean",
+        "percent",
+        "groundwater"
+      ],
+      "title": "AggTypeEnum",
+      "type": "string"
+    }
+  },
+  "description": "Pydantic model for divide attributes attribute configuration",
+  "properties": {
+    "data_dir": {
+      "default": "/mnt/share/projects/hydro/code/nhf-builds2/nhf-builds/data/divide_attributes",
+      "description": "Top level directory for data layers",
+      "format": "path",
+      "title": "Data Dir",
+      "type": "string"
+    },
+    "agg_type": {
+      "$ref": "#/$defs/AggTypeEnum",
+      "description": "Zonal stats aggregation type"
+    },
+    "field_name": {
+      "description": "Output field name for divide attribute",
+      "title": "Field Name",
+      "type": "string"
+    },
+    "file_name": {
+      "description": "File path of attribute raster",
+      "format": "path",
+      "title": "File Name",
+      "type": "string"
+    },
+    "tmp": {
+      "description": "Temp file path for parquet",
+      "format": "path",
+      "title": "Tmp",
+      "type": "string"
+    }
+  },
+  "required": [
+    "agg_type",
+    "field_name",
+    "file_name"
+  ],
+  "title": "DivideAttributeConfig",
+  "type": "object"
+}

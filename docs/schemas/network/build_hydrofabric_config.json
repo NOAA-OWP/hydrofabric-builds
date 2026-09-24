@@ -1,0 +1,44 @@
+{
+  "description": "Configs for buld hydrofabric stage",
+  "properties": {
+    "reference_divides_path": {
+      "default": "data/reference_divides.parquet",
+      "description": "The location of the reference fabric divides.",
+      "title": "Reference Divides Path",
+      "type": "string"
+    },
+    "reference_flowpaths_path": {
+      "default": "data/reference_flowpaths.parquet",
+      "description": "The location of the reference fabric flowpaths.",
+      "title": "Reference Flowpaths Path",
+      "type": "string"
+    },
+    "divide_aggregation_threshold": {
+      "default": 3.0,
+      "description": "Threshold for divides to aggreagate into an upstream catchment [km^2]",
+      "title": "Divide Aggregation Threshold",
+      "type": "number"
+    },
+    "headwater_virtual_length_threshold": {
+      "default": 0.3,
+      "description": "Order-1 headwater flowpaths shorter than this length (km) are virtualized instead of independent",
+      "title": "Headwater Virtual Length Threshold",
+      "type": "number"
+    },
+    "debug_outlet_count": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Debug setting to limit the number of outlets processed. None (default) processes all outlets. Set to a positive integer to limit for testing.",
+      "title": "Debug Outlet Count"
+    }
+  },
+  "title": "BuildHydrofabricConfig",
+  "type": "object"
+}

@@ -1,0 +1,20 @@
+{
+  "class_name": "LatLonLimits",
+  "values": {
+    "LAT_MIN_CONUS": 24,
+    "LAT_MAX_CONUS": 55,
+    "LON_MIN_CONUS": -125,
+    "LON_MAX_CONUS": -66,
+    "LAT_MIN_AK": 51,
+    "LAT_MAX_AK": 72,
+    "LON_MIN_AK": -172,
+    "LAT_MIN_HI": 18,
+    "LAT_MAX_HI": 23,
+    "LON_MIN_HI": -161,
+    "LON_MAX_HI": -155,
+    "LAT_MIN_PRVI": 17,
+    "LAT_MAX_PRVI": 19,
+    "LON_MIN_PRVI": -68,
+    "LON_MAX_PRVI": -64
+  }
+}

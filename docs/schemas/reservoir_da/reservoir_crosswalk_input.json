@@ -1,0 +1,78 @@
+{
+  "$defs": {
+    "ResCrosswalkFields": {
+      "description": "Fields in reservoir DA crosswalk file (\"reservoir_index_AnA.netcdf).\n\nThese can be changed in config file if needed and will be input read index functions.",
+      "properties": {
+        "lake_id_field": {
+          "default": "lake_id",
+          "description": "Lake ID field in Res ANA index file",
+          "title": "Lake Id Field",
+          "type": "string"
+        },
+        "usgs_gage_id_field": {
+          "default": "usgs_gage_id",
+          "description": "USGS gage ID field in reservoir index file",
+          "title": "Usgs Gage Id Field",
+          "type": "string"
+        },
+        "usgs_lake_id_field": {
+          "default": "usgs_lake_id",
+          "description": "USGS lake ID field in reservoir index file",
+          "title": "Usgs Lake Id Field",
+          "type": "string"
+        },
+        "usace_gage_id_field": {
+          "default": "usace_gage_id",
+          "description": "USACE gage ID field in reservoir index file",
+          "title": "Usace Gage Id Field",
+          "type": "string"
+        },
+        "usace_lake_id_field": {
+          "default": "usace_lake_id",
+          "description": "USACE lake ID field in reservoir index file",
+          "title": "Usace Lake Id Field",
+          "type": "string"
+        },
+        "rfc_gage_id_field": {
+          "default": "rfc_gage_id",
+          "description": "RFC gage ID in reservoir index",
+          "title": "Rfc Gage Id Field",
+          "type": "string"
+        },
+        "rfc_lake_id_field": {
+          "default": "rfc_lake_id",
+          "description": "RFC lake ID in reservoir index",
+          "title": "Rfc Lake Id Field",
+          "type": "string"
+        }
+      },
+      "title": "ResCrosswalkFields",
+      "type": "object"
+    }
+  },
+  "description": "Reservoir crosswalk file (\"reservoir_index_AnA.netcdf\")",
+  "properties": {
+    "path": {
+      "default": "input/reservoir_index_AnA.nc",
+      "description": "File with reservoir crosswalks for USGS, USACE, RFC",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "fields": {
+      "$ref": "#/$defs/ResCrosswalkFields",
+      "default": {
+        "lake_id_field": "lake_id",
+        "usgs_gage_id_field": "usgs_gage_id",
+        "usgs_lake_id_field": "usgs_lake_id",
+        "usace_gage_id_field": "usace_gage_id",
+        "usace_lake_id_field": "usace_lake_id",
+        "rfc_gage_id_field": "rfc_gage_id",
+        "rfc_lake_id_field": "rfc_lake_id"
+      },
+      "description": "All field mappings for reservoir index file"
+    }
+  },
+  "title": "ResCrossWalkInput",
+  "type": "object"
+}

@@ -1,5 +1,7 @@
 # Flowpath Attributes Build
 
+TODO: Update
+
 The flowpath attributes task calculates metrics per flowpath linestring from multiple sources: DEM, WRF defaults, and RiverML outputs.
 
 ## To run:

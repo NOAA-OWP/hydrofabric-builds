@@ -1,0 +1,155 @@
+{
+  "description": "Lakes: NWM Lakes is a polygon dataset with COMID. This is the operational lakes layer provided by OWP.",
+  "properties": {
+    "path": {
+      "default": "input/nwm_lakes.gpkg",
+      "description": "Source path. LakesConfig will inject preceding input path.",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "buffered_path": {
+      "default": "input/nwm_lakes_sconus_input_500m_buffer.gpkg",
+      "description": "Source path, with polygons buffered out (for validating duplicate lake points). LakesConfig will inject preceding input path.",
+      "format": "path",
+      "title": "Buffered Path",
+      "type": "string"
+    },
+    "layer": {
+      "default": "lakes",
+      "description": "GPKG layer",
+      "title": "Layer",
+      "type": "string"
+    },
+    "fp_associated_path": {
+      "default": "output/fp_associated.gpkg",
+      "description": "A temporary layer to read lakes from where flowpaths have been associated and attributes joined. Skips flowpath association.",
+      "format": "path",
+      "title": "Fp Associated Path",
+      "type": "string"
+    },
+    "run": {
+      "default": true,
+      "description": "Flag to run NWM lakes input. Must be set to false if file is not present.",
+      "title": "Run",
+      "type": "boolean"
+    },
+    "improve_placement_ref_res": {
+      "default": true,
+      "description": "Flag to use reference reservoirs to improve placement of lakes.",
+      "title": "Improve Placement Ref Res",
+      "type": "boolean"
+    },
+    "improve_placement_path": {
+      "default": "output/fp_improved placement.gpkg",
+      "description": "A temporary layer to read lakes from where flowpaths have been associated, attributes joined, and reference reservoirs folded in to improve placement. Skips reference reservoirs folding.",
+      "format": "path",
+      "title": "Improve Placement Path",
+      "type": "string"
+    },
+    "use_cached_improve_placement": {
+      "default": false,
+      "description": "Use the cached layer stored at `improve_placement_path` regardless of whether the process is requested to run.",
+      "title": "Use Cached Improve Placement",
+      "type": "boolean"
+    },
+    "associate_flowpaths": {
+      "default": true,
+      "description": "Flag to run flowpath association",
+      "title": "Associate Flowpaths",
+      "type": "boolean"
+    },
+    "flowpath_association_method": {
+      "default": "polygon_outlet",
+      "description": "Type of flowpath association. Options are `polygon_outlet` or `nearest_point`",
+      "title": "Flowpath Association Method",
+      "type": "string"
+    },
+    "search_radius_m": {
+      "default": 1000.0,
+      "description": "Distance from flowpath to search when associating flowpaths with points.",
+      "title": "Search Radius M",
+      "type": "number"
+    },
+    "max_refres_search_distance_m": {
+      "default": 500.0,
+      "description": "Distance between NWM lake and reference reservoirs used when improving NWM lake placement.",
+      "title": "Max Refres Search Distance M",
+      "type": "number"
+    },
+    "intersection_length_min_m": {
+      "default": 3.0,
+      "description": "Minimum prefered intersection lenght when associating polygons with flowpaths. If the flowpath intersection is extremely short, it can sometimes be almost entirely on a long downstream flowpath.",
+      "title": "Intersection Length Min M",
+      "type": "number"
+    },
+    "id_field": {
+      "default": "newID",
+      "description": "ID field for NWM lakes input",
+      "title": "Id Field",
+      "type": "string"
+    },
+    "attrib_src_path": {
+      "anyOf": [
+        {
+          "format": "path",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Source file for joining attributes from another file. It will be skipped if null.",
+      "title": "Attrib Src Path"
+    },
+    "attrib_src_layer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Source file layer for importing attributes",
+      "title": "Attrib Src Layer"
+    },
+    "attrib_src_key": {
+      "default": "lake_id",
+      "description": "Source file key to match when importing attributes",
+      "title": "Attrib Src Key",
+      "type": "string"
+    },
+    "fields": {
+      "default": [
+        "lake_id",
+        "res_id",
+        "LkArea",
+        "LkMxE",
+        "WeirC",
+        "WeirL",
+        "WeirE",
+        "OrificeC",
+        "OrificeA",
+        "OrificeE",
+        "Dam_Length",
+        "ifd",
+        "reservoir_index_AnA",
+        "reservoir_index_Extended_AnA",
+        "reservoir_index_GDL_AK",
+        "reservoir_index_Medium_Range",
+        "reservoir_index_Short_Range"
+      ],
+      "description": "Fields to retain from NWM lakes data. IDs and geometry will be kept by default.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Fields",
+      "type": "array"
+    }
+  },
+  "title": "NWMLakeInput",
+  "type": "object"
+}

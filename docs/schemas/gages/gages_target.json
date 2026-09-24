@@ -1,0 +1,47 @@
+{
+  "description": "gages: target/output configs",
+  "properties": {
+    "crs": {
+      "default": "EPSG:5070",
+      "title": "Crs",
+      "type": "string"
+    },
+    "snap_tolerance_m": {
+      "default": 100.0,
+      "title": "Snap Tolerance M",
+      "type": "number"
+    },
+    "update_existing": {
+      "default": true,
+      "title": "Update Existing",
+      "type": "boolean"
+    },
+    "exclude_ids": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          }
+        ]
+      },
+      "title": "Exclude Ids",
+      "type": "array"
+    },
+    "out_gpkg": {
+      "default": "gages.gpkg",
+      "format": "path",
+      "title": "Out Gpkg",
+      "type": "string"
+    },
+    "gpkg_layer_name": {
+      "default": "gages",
+      "title": "Gpkg Layer Name",
+      "type": "string"
+    }
+  },
+  "title": "GagesTarget",
+  "type": "object"
+}

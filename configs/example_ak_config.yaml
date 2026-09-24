@@ -1,12 +1,12 @@
 # global settings
 output_dir: data/
 crs: EPSG:3338
-output_name: ak_nhf_1.1.4.gpkg # If not specified, will default to version
+output_name: ak_nhf_1.2.3.gpkg # If not specified, will default to version
 
 # hf builds
 build:
-  reference_divides_path: data/reference/ak_0.1.7_reference_divides.parquet
-  reference_flowpaths_path: data/reference/ak_0.1.7_reference_flowpaths.parquet
+  reference_divides_path: data/reference/ak_0.1.8_reference_divides.parquet
+  reference_flowpaths_path: data/reference/ak_0.1.8_reference_flowpaths.parquet
   #debug_outlet_count: 2000 # If specified, only the total amount of rivers here will be built
   divide_aggregation_threshold: 3.0
 
@@ -15,12 +15,12 @@ tasks:
   build_hydrofabric: True
   divide_attributes: True
   flowpath_attributes: True
-  waterbodies: False # not present in OCONUS
   hydrolocations: True
   gages: True
   lakes: True
   fp_crosswalk: True
   validate_hf: True
+  res_da: True
 
 flowpath_attributes:
   flowpath_id: fp_id
@@ -196,13 +196,86 @@ divide_attributes:
       file_name: ueb/dec.tif
       agg_type: mean
       field_name: temp_delta_dec_mean
-    gwbuckparm:
-      file_name: gw/GWBUCKPARM_AK_FullRouting.nc
-      file_name2: gw/spatialweights_AK_FullRouting.nc
-      agg_type: groundwater
-      field_name: groundwater
-
-
+    coeff:
+      file_name: gw/coeff.tif
+      agg_type: mean
+      field_name: cgw
+    expon:
+      file_name: gw/expon.tif
+      agg_type: mean
+      field_name: expon
+    zmax:
+      file_name: gw/zmax.tif
+      agg_type: mean
+      field_name: max_gw_storage
+    lzfpm:
+      file_name: sac-sma/LZFPM.tif
+      agg_type: mean
+      field_name: lzfpm_mean
+    lzpk:
+      file_name: sac-sma/LZPK.tif
+      agg_type: mean
+      field_name: lzpk_mean
+    lztwm:
+      file_name: sac-sma/LZTWM.tif
+      agg_type: mean
+      field_name: lztwm_mean
+    rexp:
+      file_name: sac-sma/REXP.tif
+      agg_type: mean
+      field_name: rexp_mean
+    uzk:
+      file_name: sac-sma/UZK.tif
+      agg_type: mean
+      field_name: uzk_mean
+    zperc:
+      file_name: sac-sma/ZPERC.tif
+      agg_type: mean
+      field_name: zperc_mean
+    lzfsm:
+      file_name: sac-sma/LZFSM.tif
+      agg_type: mean
+      field_name: lzfsm_mean
+    lzsk:
+      file_name: sac-sma/LZSK.tif
+      agg_type: mean
+      field_name: lzsk_mean
+    pfree:
+      file_name: sac-sma/PFREE.tif
+      agg_type: mean
+      field_name: pfree_mean
+    uzfwm:
+      file_name: sac-sma/UZFWM.tif
+      agg_type: mean
+      field_name: uzfwm_mean
+    uztwm:
+      file_name: sac-sma/UZTWM.tif
+      agg_type: mean
+      field_name: uztwm_mean
+    vegetation_height:
+      file_name: pet/veg_height.tif
+      agg_type: mean
+      field_name: vegetation_height
+    zero_plane_displacement_height:
+      file_name: pet/zero_plane.tif
+      agg_type: mean
+      field_name: zero_plane_displacement_height
+    momentum_transfer_roughness_length:
+      file_name: pet/momentum_transfer.tif
+      agg_type: mean
+      field_name: momentum_transfer_roughness_length
+    heat_transfer_roughness_length:
+      file_name: pet/heat_transfer.tif
+      agg_type: mean
+      field_name: heat_transfer_roughness_length
+    surface_longwave_emissivity:
+      file_name: pet/longwave_emissivity.tif
+      agg_type: mean
+      field_name: surface_longwave_emissivity
+    surface_shortwave_albedo:
+      file_name: pet/shortwave_albedo.tif
+      agg_type: mean
+      field_name: surface_shortwave_albedo
 
 gages:
   gages:
@@ -232,6 +305,16 @@ gages:
         id_col_name: site_no
         x_col_name: lon
         y_col_name: lat
+      rfc:
+        path: rfc/nwps_all_gauges_report.csv
+        id_col_name: nws shef id
+        status_col_name: forecast status
+        x_col_name: longitude
+        y_col_name: latitude
+        gage_source_crs: EPSG:4326
+      nwm_rfc:
+        path: rfc/reservoir_index_GDL_AK.nc
+        rfc_id_col: 'rfc_gage_id'
     target:
       crs: EPSG:3338
       snap_tolerance_m: 100.0
@@ -290,12 +373,54 @@ fp_crosswalk:
     path: data/nhd-crosswalk/nhd_crosswalk_ak.parquet
 
 #---------------------------------------------------
-# nwm lakes
-#--------------------------------------------------
+# lakes
+#---------------------------------------------------
 lakes:
-  input_path: "data/lakes/input/ak_lakeparm.gpkg"
-  processed_path: "data/lakes/output/ak_lakes_fp_associated.gpkg"
-  associate_flowpaths: True
-  flowpath_association_method: "nearest_point"
-  populate_hydaulics: False
-  id_field: "lake_id"
+  input_dir: "./data/ak/lakes/"
+  vfp_lake_crosswalk: True
+  calculate_elevation: False # AK is joined to existing data and does not need new elevation
+  use_cached_lakes: False
+  output_comid_field: "lake_id"
+  lakes_path: "output/ak_lakes.gpkg"
+  validate_duplicates: False # flag to search for duplicate lake points during lakes validation. Defaults to true
+  save_duplicate_gpkgs: False # flag to (in addition to normal output) save the resulting duplicate lake points/polygons as geopackages. Defaults to false
+  nwm:
+    run: True
+    associate_flowpaths: True # this will run the flowpath association
+    path: "input/ak_lakeparm.gpkg"
+    layer: "ak_lakeparm"
+    fp_associated_path: "output/ak_lakes_fp_associated.gpkg" # can be empty or populated
+    improve_placement_ref_res: False # no ref res in oCONUS
+    flowpath_association_method:  "nearest_point"
+    id_field: "lake_id"
+    search_radius_m: 25000.0
+  adhoc:
+    run: False
+  ref_res:
+    run: False # No reference reservoirs in AK
+  ref_wb:
+    run: False # No reference waterbodies in AK
+  nid:
+    path: input/NID2019_U.csv
+  dem:
+    path: input/ak_dem_250.tif # Generally AK does not need elevation, but store DEM here if so
+
+res_da:
+  input_dir: "./data/ak/lakes/"
+  lake_id_field: "lake_id"
+  gage_id_field: "site_no"
+  da_type_field: "da_type"
+  great_lakes: False
+  generate_additional_crosswalk: False
+  all_level_pool: False
+  adhoc:
+    run: False
+  res_crosswalk:
+    path: "input/reservoir_index_GDL_AK.nc"
+  active_rfc:
+    path: input/nwps_all_gauges_report.csv
+    id_field: nws shef id
+  usace:
+    run: False
+  usbr:
+    run: False

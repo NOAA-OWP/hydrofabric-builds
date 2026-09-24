@@ -1,0 +1,11 @@
+{
+  "class_name": "GroundWaterProjectionAK",
+  "values": {
+    "PROJ4": "+proj=stere +lat_0=90 +lat_ts=60 +lon_0=-135 +x_0=0 +y_0=0 +R=6370000 +units=m +no_defs",
+    "X_ORIGIN": -1130764.7202253528,
+    "Y_ORIGIN": -3163389.53353531,
+    "WIDTH": 3516,
+    "HEIGHT": 1816,
+    "DX": 250
+  }
+}

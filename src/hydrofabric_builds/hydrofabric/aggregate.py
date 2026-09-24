@@ -128,8 +128,11 @@ def _process_aggregation_pairs(
             if div_area_sum > 0:
                 for fp in ref_data:
                     fp_id = str(fp["flowpath_id"])
-                    fp_area = float(fp["areasqkm"])
-                    # NOTE: Investigate flowpaths with no divide area
+                    fp_area = (
+                        float(div_lookup[fp_id]["shapely_geometry"].area / 1e6)
+                        if fp_id in div_lookup
+                        else 0.0
+                    )
                     ref_id_to_percentage[fp_id] = fp_area / div_area_sum
 
                 # Normalize to ensure they sum to exactly 1.0
@@ -484,22 +487,23 @@ def _fold_headwater_divides(
 
             nhf_unit["area_sqkm"] = nhf_unit.get("area_sqkm", 0) + hw_div_area
 
-        # Add percentage entries for headwater ref FPs and re-normalize
+        # Recompute all ref FP percentages from divide geometry using the folded total area
         ref_id_to_percentage = nhf_unit.get("ref_id_to_percentage", {})
         total_area = nhf_unit["area_sqkm"]
         if total_area > 0:
-            for div_id in div_ref_ids:
-                if div_id in div_lookup:
-                    div_area = div_lookup[div_id]["shapely_geometry"].area / 1e6
-                    ref_id_to_percentage[div_id] = div_area / total_area
+            # Collect all ref IDs (existing mainstem + headwater)
+            all_ref_ids: set[str] = {str(rid) for rid in div_ref_ids}
+            for rid in ref_id_to_percentage:
+                all_ref_ids.add(rid)
 
-            # Re-normalize all percentages to sum to 1.0
-            total_pct = sum(ref_id_to_percentage.values())
-            if total_pct > 0:
-                for rid in ref_id_to_percentage:
-                    ref_id_to_percentage[rid] /= total_pct
+            # Recompute all percentages from divide geometry using folded total area
+            new_ref_id_to_percentage: dict[str, float] = {}
+            for rid in all_ref_ids:
+                if rid in div_lookup:
+                    div_area = div_lookup[rid]["shapely_geometry"].area / 1e6
+                    new_ref_id_to_percentage[rid] = div_area / total_area
 
-            nhf_unit["ref_id_to_percentage"] = ref_id_to_percentage
+            nhf_unit["ref_id_to_percentage"] = new_ref_id_to_percentage
 
 
 def _aggregate_geometries(

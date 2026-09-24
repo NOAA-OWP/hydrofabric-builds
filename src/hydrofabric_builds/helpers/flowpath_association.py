@@ -1,19 +1,22 @@
 """Helpers for associating geometries with reference flowpaths"""
 
+import logging
 from pathlib import Path
 
 import geopandas as gpd
+import pandas as pd
+import rustworkx as rx
+
+logger = logging.getLogger(__name__)
 
 
 def associate_flowpaths_nearest_point(
-    points_path: Path,
-    flowpaths_path: Path,
+    gdf_flowpaths: gpd.GeoDataFrame,
+    gdf_points: gpd.GeoDataFrame,
     search_radius_m: int | float,
     point_id: str,
     flowpath_id: str,
     flowpath_id_out_field: str,
-    flowpath_layer: str | None = None,
-    points_layer: str | None = None,
 ) -> gpd.GeoDataFrame:
     """Associate point geometries with flowpath lines by buffering by a search radius and selecting mimnium distance
 
@@ -22,7 +25,7 @@ def associate_flowpaths_nearest_point(
     Parameters
     ----------
     points_path : Path
-        Points to associate with flowpath
+        Points to associate with flowpath - can be virtual, reference, or flowpath
     flowpaths_path : Path
         Flowpath linestrings
     search_radius_m : int | float
@@ -32,29 +35,13 @@ def associate_flowpaths_nearest_point(
     flowpath_id : str
         Column name for ID in flowpath gdf
     flowpath_id_out_field: str
-        Column name for the flowpath ID in output file, by default 'ref_fp_id'
-    flowpath_layer: str | None
-        Layer name if reading from a GPKG, by default None
-    flowpath_layer: str | None
-        Layer name if reading from a GPKG, by default None
+        Column name for the flowpath ID in output file
 
     Returns
     -------
     gpd.GeoDataFrame
         Original point gdf including associated flowpath
     """
-    # load
-    gdf_flowpaths = (
-        gpd.read_parquet(flowpaths_path)
-        if ".parquet" in flowpaths_path.name
-        else gpd.read_file(flowpaths_path, layer=flowpath_layer)
-    )
-    gdf_points = (
-        gpd.read_file(points_path, layer=points_layer)
-        if points_layer is not None
-        else gpd.read_file(points_path)
-    )
-
     # coerce geometry to 2D linestings
     gdf_flowpaths["geometry"] = gdf_flowpaths["geometry"].line_merge()
     gdf_flowpaths["geometry"] = gdf_flowpaths["geometry"].force_2d()
@@ -99,6 +86,10 @@ def associate_flowpaths_nearest_point(
     for k, v in out.items():
         gdf_points.loc[gdf_points[point_id] == k, flowpath_id_out_field] = v
 
+    # NOTE: forcing was needed in AK
+    if pd.api.types.is_object_dtype(gdf_points[flowpath_id_out_field]):
+        gdf_points["virtual_fp_id"] = pd.to_numeric(gdf_points["virtual_fp_id"]).astype(pd.Int64Dtype())
+
     return gdf_points
 
 
@@ -129,9 +120,7 @@ def join_attributes(
         Whether to rename attrib_dst_key to attrib_src_key in returned GDF
 
     """
-    if not attrib_src_path:
-        return gdf
-    elif (
+    if (
         attrib_src_path and not attrib_src_fields
     ):  # It is illegal behavior to define only one of these fields. We enforce that here
         raise ValueError(
@@ -152,92 +141,155 @@ def join_attributes(
             if attrib_src_key in attrib_src_fields_valid:
                 attrib_src_fields_valid.remove(attrib_src_key)
 
+        if not pd.api.types.is_object_dtype(gdf_attrib_src[attrib_src_key]):
+            gdf_attrib_src[attrib_src_key] = (
+                gdf_attrib_src[attrib_src_key].astype(pd.Int64Dtype()).astype(str)
+            )
+
+        if not pd.api.types.is_object_dtype(gdf[attrib_dst_key]):
+            gdf[attrib_dst_key] = gdf[attrib_dst_key].astype(str)
+
         gdf_merged = gdf.merge(
             gdf_attrib_src[[attrib_src_key] + attrib_src_fields_valid],
             how="left",
             left_on=attrib_dst_key,
             right_on=attrib_src_key,
         )
+        gdf_merged["attrib_src"] = attrib_src_path.name
 
     return gdf_merged
 
 
-def associate_flowpaths_polygon_outlet(
-    polygon_path: Path,
-    flowpaths_path: Path,
-    search_radius_m: int | float,
-    min_preferred_intersection_len_m: float,
-    flowpath_id: str,
-    flowpath_id_out_field: str = "fp_id",
-    polygon_layer: str | None = None,
-    flowpath_layer: str | None = None,
-) -> gpd.GeoDataFrame:
-    """Associate the intersection of waterbody polygons and their flowpath outlets
-
-    Adapted from above
+def make_vfp_graph(vfp: gpd.GeoDataFrame, vn: gpd.GeoDataFrame) -> tuple[rx.PyDiGraph, dict[str, int]]:
+    """Build graph from virtual flowpaths and virtual nexus
 
     Parameters
     ----------
-    polygon_path : Path
-        Polygons to associate with flowpath
-    flowpaths_path : Path
-        Flowpath linestrings
-    search_radius_m : int | float
-        Buffer radius for matching flowpaths
-    flowpath_id : str
-        Column name for ID in flowpath gdf
-    flowpath_id_out_field: str
-        Column name for the flowpath ID in output file, by default 'fp_id'
-    flowpath_layer: str | None
-        Layer name if reading from a GPKG, by default None
+    vfp : gpd.GeoDataFrame
+        virtual flowpath geodataframe
+    vn : gpd.GeoDataFrame
+        virtual nexus geodataframe
+
+    Returns
+    -------
+    tuple[rx.PyDiGraph, dict[str, int]]
+        PyDiGraph of virtual network, dictionary of virtual flowpath id : integer index used in graph
+    """
+    edges = (
+        vfp[["virtual_fp_id", "dn_virtual_nex_id"]]
+        .merge(
+            vn[["virtual_nex_id", "dn_virtual_fp_id"]],
+            how="left",
+            left_on="dn_virtual_nex_id",
+            right_on="virtual_nex_id",
+        )
+        .rename(columns={"dn_virtual_fp_id": "to_vfp_id"})[["virtual_fp_id", "to_vfp_id"]]
+    )
+
+    edges["virtual_fp_id"] = edges["virtual_fp_id"].astype(pd.Int64Dtype()).astype(str)
+    edges["to_vfp_id"] = edges["to_vfp_id"].astype(pd.Int64Dtype()).astype(str)
+    all_ids = pd.concat([edges["virtual_fp_id"], edges["to_vfp_id"]]).unique()
+    id_to_idx = {fp_id: idx for idx, fp_id in enumerate(all_ids)}
+
+    # Build directed graph from edge list
+    graph: rx.PyDiGraph = rx.PyDiGraph()
+    graph.add_nodes_from(range(len(all_ids)))
+    graph.extend_from_edge_list(
+        [
+            (id_to_idx[src], id_to_idx[dst])
+            for src, dst in zip(edges["virtual_fp_id"], edges["to_vfp_id"], strict=True)
+        ]
+    )
+
+    return graph, id_to_idx
+
+
+def associate_flowpaths_polygon_graph(
+    gdf_poly: gpd.GeoDataFrame,
+    gdf_vfp: gpd.GeoDataFrame,
+    graph: rx.PyDiGraph,
+    id_to_idx: dict[str, int],
+    poly_id: str,
+    vfp_id: str = "virtual_fp_id",
+    intersection_length_min_m: int = 3,
+) -> gpd.GeoDataFrame:
+    """Associate polygon data with the intersecting flowpath with the largest subgraph (ancestors)
+
+    Parameters
+    ----------
+    gdf_poly : gpd.GeoDataFrame
+        polygon geodataframe (e.g. lakes)
+    gdf_vfp : gpd.GeoDataFrame
+       virtual flowpaths geodataframe, unmodified
+    graph : rx.PyDiGraph
+        virtual flowpath graph
+    id_to_idx : dict[str, str]
+        mapping of virtual flowpath ID to integer index used in graph
+    fp_id : str
+        field name for flowpath/virtual flowpath
+    poly_id : str
+        field name for polygon ID
+    intersection_length_min_m : int, optional
+        If a path intersects the polygon by less than this value, it will be removed. This is to handle
+        frequent cases where flowpaths only overlap by <1 meter. If the small intersection is used
+        the lake will route water too far downstream, by default 3 meters
 
     Returns
     -------
     gpd.GeoDataFrame
-    Original lake gdf including associated flowpath
-
+        _description_
     """
-    gdf_flowpaths = (
-        gpd.read_parquet(flowpaths_path)
-        if ".parquet" in flowpaths_path.name
-        else gpd.read_file(flowpaths_path, layer=flowpath_layer)
-    )
-    gdf_poly = (
-        gpd.read_file(polygon_path, layer=polygon_layer) if polygon_layer else gpd.read_file(polygon_path)
-    )
+    # Cast all IDs to string
+    if pd.api.types.is_numeric_dtype(gdf_poly[poly_id]):
+        gdf_poly[poly_id] = gdf_poly[poly_id].astype(pd.Int64Dtype()).astype(str)
+    gdf_vfp[vfp_id] = gdf_vfp[vfp_id].astype(pd.Int64Dtype()).astype(str)
 
-    # coerce geometry to 2D linestings
-    gdf_flowpaths["geometry"] = gdf_flowpaths["geometry"].line_merge()
-    gdf_flowpaths["geometry"] = gdf_flowpaths["geometry"].force_2d()
+    # intersect polygons and linestrings resulting in linestring intersections
+    int_vfp = gdf_poly.overlay(gdf_vfp, keep_geom_type=False)
 
-    # change to reference flowpath CRS if not matching
-    if gdf_poly.crs != gdf_flowpaths.crs:
-        gdf_poly = gdf_poly.to_crs(gdf_flowpaths.crs)
-        assert gdf_poly.crs == gdf_flowpaths.crs, "CRS does not match for flowpaths and points"
+    poly_fp_pairs = {}
+    missing_keys = []
 
-    # iterates through buffers, intersects, chooses minimum hydrosequence
-    for idx, _lake in gdf_poly.iterrows():
-        for search_radius in range(0, search_radius_m, int(search_radius_m / 10)):  # type: ignore[arg-type]
-            buffered = (
-                gdf_poly["geometry"][idx]
-                if search_radius == 0
-                else gdf_poly["geometry"][idx].buffer(search_radius)
-            )
-            candidates = gdf_flowpaths["geometry"].intersects(buffered, [flowpath_id, "hydroseq"])
-            candidates = gdf_flowpaths.loc[candidates]
-            num_candidates = len(candidates["hydroseq"])
-            if num_candidates == 0:
+    # process each polygon to find flowpath with most ancestors (largest subgraph)
+    for poly in int_vfp[poly_id].unique():
+        # for each polygon, get all intersecting flowpaths
+        # for each intersecting flowpath, check the intersection length
+        # if the intersection length > minimum intersection length, keep flowpaths
+        candidates = int_vfp.loc[int_vfp[poly_id] == poly, [vfp_id, "geometry"]]
+        single_poly = gdf_poly.loc[gdf_poly[poly_id] == poly, [poly_id, "geometry"]]
+        int = single_poly.overlay(candidates, how="intersection", keep_geom_type=False)
+        int = int.loc[int["geometry"].length > intersection_length_min_m]
+
+        # track which flowpath has most ancestors and the flowpath ID
+        # for each candidate, get a list of ancestors
+        # save the candidate with largest subgraph / most ancestors
+        max_ancestors = 0
+        max_fp = None
+
+        for cand in int[vfp_id].values:
+            try:
+                ind = id_to_idx[cand]
+                vals = list(rx.ancestors(graph, ind))
+
+                # set max ancestor count and candidate
+                # including >= is to handle 0 if the only cand is 0
+                if len(vals) >= max_ancestors:
+                    max_ancestors = len(vals)
+                    max_fp = cand
+            except KeyError:
+                missing_keys.append(cand)
                 continue
-            candidates = candidates.sort_values("hydroseq")
-            # try to use a slightly better candidate if the intersection length is very small
-            intersection_len = candidates.iloc[0]["geometry"].intersection(buffered).length
-            gdf_poly.loc[idx, flowpath_id_out_field] = (
-                candidates.iloc[1][flowpath_id]
-                if intersection_len < min_preferred_intersection_len_m and num_candidates > 1
-                else candidates.iloc[0][flowpath_id]
-            )
-            gdf_poly.loc[idx, "buffer_radius"] = search_radius
-            break
 
+        poly_fp_pairs[poly] = max_fp
+
+    if missing_keys:
+        logger.warning(
+            f"Missing flowpath IDs detected in flowpath graph. Graph may be misconstructed. Keys: {missing_keys}"
+        )
+
+    # join flowpaths back to polygons
+    df_pairs = pd.DataFrame(data={poly_id: poly_fp_pairs.keys(), vfp_id: poly_fp_pairs.values()})
+    gdf_poly = gdf_poly.merge(df_pairs, on=poly_id, how="left")
     gdf_poly["geometry"] = gdf_poly["geometry"].centroid
+    gdf_poly[vfp_id] = pd.to_numeric(gdf_poly[vfp_id]).astype(pd.Int64Dtype())
     return gdf_poly

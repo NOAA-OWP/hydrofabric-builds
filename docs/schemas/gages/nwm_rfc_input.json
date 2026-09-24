@@ -1,0 +1,23 @@
+{
+  "description": "NWM reservoir index file for retaining RFC and USACE gages. USACE IDs are found in NID.",
+  "properties": {
+    "path": {
+      "default": "rfc/reservoir_index_AnA.nc",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "rfc_id_col": {
+      "default": "rfc_gage_id",
+      "title": "Rfc Id Col",
+      "type": "string"
+    },
+    "usace_id_col": {
+      "default": "usace_gage_id",
+      "title": "Usace Id Col",
+      "type": "string"
+    }
+  },
+  "title": "NWMRFCInput",
+  "type": "object"
+}

@@ -15,8 +15,8 @@ from hydrofabric_builds.schemas.hydrofabric import (
     FPCrosswalkConfig,
     GagesConfig,
     LakesConfig,
+    ResDAConfig,
     ValidateHFConfig,
-    WaterbodiesConfig,
 )
 
 
@@ -35,19 +35,19 @@ class TaskSelection(BaseModel):
         default=True, description="Decides if we want to run the flowpath attributes task"
     )
 
-    waterbodies: bool = Field(default=True, description="Decides if we want to run the waterbodies task")
-
-    lakes: bool = Field(default=True, description="Decides if we want to run the nwm lakes task")
-
-    gages: bool = Field(default=True, description="Decides if we want to run the gages task")
-
     fp_crosswalk: bool = Field(
         default=True, description="Decides if we want to run the flowpath crosswalk task"
     )
 
+    gages: bool = Field(default=True, description="Decides if we want to run the gages task")
+
     hydrolocations: bool = Field(
         default=True, description="Decides if we want to run the hydrolocations task"
     )
+
+    lakes: bool = Field(default=True, description="Decides if we want to run the nwm lakes task")
+
+    res_da: bool = Field(default=False, description="Decides if we want to run reservoir DA")
 
     validate_hf: bool = Field(default=False, description="Decides if we want to run hf validation")
 
@@ -88,10 +88,6 @@ class HFConfig(BaseModel):
         default=FlowpathAttributesModelConfig(),
     )
 
-    waterbodies: WaterbodiesConfig = Field(
-        default=WaterbodiesConfig(), description="Settings for building waterbodies"
-    )
-
     lakes: LakesConfig = Field(default=LakesConfig(), description="Settings for building NWM lakes")
 
     gages: GagesConfig = Field(default=GagesConfig(), description="Settings for building gages")
@@ -99,6 +95,8 @@ class HFConfig(BaseModel):
     fp_crosswalk: FPCrosswalkConfig = Field(
         default=FPCrosswalkConfig(), description="Settings for building flowpath crosswalks"
     )
+
+    res_da: ResDAConfig = Field(default=ResDAConfig(), description="Settings for building reservoir DA layer")
 
     validate_hf: ValidateHFConfig = Field(
         default=ValidateHFConfig(), description="settings for validating hf"

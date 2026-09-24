@@ -1,5 +1,7 @@
 ### Quickstart
 
+TODO: Replace s3 paths with unpacking file
+
 ## CONUS
 Below are the data files needed for running a full build of the NHF dataset and their locations. Each of the `aws` commands should be run from the NGWPC Test account
 
@@ -10,8 +12,8 @@ Below are the data files needed for running a full build of the NHF dataset and 
 2. Gages
 - `aws s3 sync s3://edfs-data/gages/ ./data/gages`
 
-3. Reference Reservoirs
-- `aws s3 sync s3://edfs-data/reservoirs/ ./data/reservoirs`
+3. Lakes
+- `aws s3 sync s3://edfs-data/lakes/sconus ./data/sconus/lakes`
 
 4. Flowpath Attributes
 - `aws s3 cp s3://edfs-data/reference/super_conus/Y_bf_predictions.parquet ./data/flowpath-attributes/Y_bf_predictions.parquet `
@@ -27,8 +29,7 @@ Below are the data files needed for running a full build of the NHF dataset and 
 - `aws s3 cp s3://edfs-data/nhd/nwm_flows.gpkg ./data/reference/nwm_flows.gpkg`
 - `aws s3 sync s3://edfs-data/nhd-crosswalk ./data/nhd-crosswalk`
 
-7. Lakes
-- `aws s3 sync s3://edfs-data/lakes/ ./data/lakes`
+
 
 To run the NHF build, you can use the example config, or make your own based on it. The full run commands are:
 ```sh
@@ -38,14 +39,14 @@ uv run python scripts/hf_runner.py --config configs/example_config.yaml
 
 ## Alaska
 1. Reference Fabric
-- `aws s3 cp s3://edfs-data/reference-builds/ak/ak_0.1.5_reference_divides.parquet ./data/reference/ak_0.1.5_reference_divides.parquet`
-- `aws s3 cp s3://edfs-data/reference-builds/ak/ak_0.1.5_reference_flowpaths.parquet ./data/reference/ak_0.1.5_reference_flowpaths.parquet`
+- `aws s3 cp s3://edfs-data/reference-builds/ak/ak_0.1.7_reference_divides.parquet ./data/reference/ak_0.1.5_reference_divides.parquet`
+- `aws s3 cp s3://edfs-data/reference-builds/ak/ak_0.1.7_reference_flowpaths.parquet ./data/reference/ak_0.1.5_reference_flowpaths.parquet`
 
 2. Gages - same as CONUS
 - `aws s3 sync s3://edfs-data/gages/ ./data/gages`
 
-3. Reference Reservoirs
-- None needed
+3. Lakes
+- `aws s3 sync s3://edfs-data/lakes/ak ./data/ak/lakes`
 
 4. Flowpath Attributes
 - None needed
@@ -58,9 +59,6 @@ uv run python scripts/hf_runner.py --config configs/example_config.yaml
 6. NHD
 - `aws s3 cp s3://edfs-data/nhd/nwm_flows_alaska_nwmv3_ID_v2.gpkg ./data/reference/nwm_flows_alaska_nwmv3_ID_v2.gpkg`
 
-7. Lakes
-- `aws s3 sync s3://edfs-data/lakes/ ./data/lakes`
-
 To run the NHF build, you can use the example config, or make your own based on it. The full run commands are:
 ```sh
 uv sync --all-extras
@@ -69,14 +67,14 @@ uv run python scripts/hf_runner.py --config configs/example_ak_config.yaml
 
 ## Hawaii
 1. Reference Fabric
-- `aws s3 cp s3://edfs-data/reference-builds/hi/hi_0.1.5_reference_divides.parquet ./data/reference/hi_0.1.5_reference_divides.parquet`
-- `aws s3 cp s3://edfs-data/reference-builds/hi/hi_0.1.5_reference_flowpaths.parquet ./data/reference/hi_0.1.5_reference_flowpaths.parquet`
+- `aws s3 cp s3://edfs-data/reference-builds/hi/hi_0.1.7_reference_divides.parquet ./data/reference/hi_0.1.5_reference_divides.parquet`
+- `aws s3 cp s3://edfs-data/reference-builds/hi/hi_0.1.7_reference_flowpaths.parquet ./data/reference/hi_0.1.5_reference_flowpaths.parquet`
 
 2. Gages - same as CONUS
 - `aws s3 sync s3://edfs-data/gages/ ./data/gages`
 
-3. Reference Reservoirs
-- None needed
+3. Lakes
+- `aws s3 sync s3://edfs-data/lakes/hi ./data/hi/lakes`
 
 4. Flowpath Attributes
 - None needed
@@ -88,8 +86,6 @@ uv run python scripts/hf_runner.py --config configs/example_ak_config.yaml
 6. NHD
 - `aws s3 cp s3://edfs-data/nhd/nwm_flows.gpkg ./data/reference/nwm_flows.gpkg`
 
-7. Lakes
-- `aws s3 sync s3://edfs-data/lakes/ ./data/lakes`
 
 To run the NHF build, you can use the example config, or make your own based on it. The full run commands are:
 ```sh
@@ -99,14 +95,14 @@ uv run python scripts/hf_runner.py --config configs/example_hi_config.yaml
 
 ## Puerto Rico/Virgin Islands
 1. Reference Fabric
-- `aws s3 cp s3://edfs-data/reference-builds/prvi/prvi_0.1.5_reference_divides.parquet ./data/reference/prvi_0.1.5_reference_divides.parquet`
-- `aws s3 cp s3://edfs-data/reference-builds/prvi/prvi_0.1.5_reference_flowpaths.parquet ./data/reference/prvi_0.1.5_reference_flowpaths.parquet`
+- `aws s3 cp s3://edfs-data/reference-builds/prvi/prvi_0.1.7_reference_divides.parquet ./data/reference/prvi_0.1.7_reference_divides.parquet`
+- `aws s3 cp s3://edfs-data/reference-builds/prvi/prvi_0.1.7_reference_flowpaths.parquet ./data/reference/prvi_0.1.7_reference_flowpaths.parquet`
 
 2. Gages - same as CONUS
 - `aws s3 sync s3://edfs-data/gages/ ./data/gages`
 
-3. Reference Reservoirs
-- None needed
+3. Lakes
+- `aws s3 sync s3://edfs-data/lakes/prvi ./data/prvi/lakes`
 
 4. Flowpath Attributes
 - None needed
@@ -118,8 +114,6 @@ uv run python scripts/hf_runner.py --config configs/example_hi_config.yaml
 6. NHD
 - `aws s3 cp s3://edfs-data/nhd/nwm_flows.gpkg ./data/reference/nwm_flows.gpkg`
 
-7. Lakes
-- `aws s3 sync s3://edfs-data/lakes/ ./data/lakes`
 
 To run the NHF build, you can use the example config, or make your own based on it. The full run commands are:
 ```sh

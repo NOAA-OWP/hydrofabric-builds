@@ -15,12 +15,12 @@ tasks:
   build_hydrofabric: True
   divide_attributes: True
   flowpath_attributes: True
-  waterbodies: True
   hydrolocations: True
   gages: True
   lakes: True
   fp_crosswalk: True
   validate_hf: True
+  res_da: True
 
 # flowpaths
 flowpath_attributes:
@@ -240,62 +240,44 @@ divide_attributes:
       file_name: ueb/dec.tif
       agg_type: mean
       field_name: temp_delta_dec_mean
-    gwbuckparm:
-      file_name: gw/GWBUCKPARM_CONUS_FullRouting.nc
-      file_name2: gw/spatialweights_1km_LongRange_NWMv3.0.nc
-      agg_type: groundwater
-      field_name: groundwater
+    coeff:
+      file_name: gw/coeff.tif
+      agg_type: mean
+      field_name: cgw
+    expon:
+      file_name: gw/expon.tif
+      agg_type: mean
+      field_name: expon
+    zmax:
+      file_name: gw/zmax.tif
+      agg_type: mean
+      field_name: max_gw_storage
+    vegetation_height:
+      file_name: pet/veg_height.tif
+      agg_type: mean
+      field_name: vegetation_height
+    zero_plane_displacement_height:
+      file_name: pet/zero_plane.tif
+      agg_type: mean
+      field_name: zero_plane_displacement_height
+    momentum_transfer_roughness_length:
+      file_name: pet/momentum_transfer.tif
+      agg_type: mean
+      field_name: momentum_transfer_roughness_length
+    heat_transfer_roughness_length:
+      file_name: pet/heat_transfer.tif
+      agg_type: mean
+      field_name: heat_transfer_roughness_length
+    surface_longwave_emissivity:
+      file_name: pet/longwave_emissivity.tif
+      agg_type: mean
+      field_name: surface_longwave_emissivity
+    surface_shortwave_albedo:
+      file_name: pet/shortwave_albedo.tif
+      agg_type: mean
+      field_name: surface_shortwave_albedo
 
-# waterbodies - all values have defaults
-waterbodies:
-  input_dir: data/reservoirs
-  output_dir: data/reservoirs/output
-  rfcda_output_name: rfc-da-hydraulics-v3.gpkg
-  rfcda_file: data/reservoirs/output/rfc-da-hydraulics-v3.gpkg # Note: By default this concatenates output_dir and rfcda_output_name but can be specified
-  default_src_crs: EPSG:4326
-  work_crs: EPSG:5070
-  nid:
-    path: source_files/NID2019_U.csv
-    src_crs: EPGS:4326
-    output_crs: EPSG:5070
-    drop_states: ["AK", "HI", "PR", "GU"]
-  refwb:
-    path: reference_reservoirs/reference_waterbodies.gpkg
-    layer: reference_waterbodies
-    src_crs: null
-    output_crs: EPSG:5070
-    id_col: comid
-  refres:
-    path: reference_reservoirs/reference-reservoirs-v1.gpkg
-    layer: reference-reservoirs-v1
-    src_crs: null
-    output_crs: EPSG:5070
-    distance_to_fp_col: distance_to_fp_m
-    wb_area_col: wb_areasqkm
-    ref_wb_id_col: ref_fab_wb
-    min_wb_area_sqkm: 0.2
-    max_distance_m: 1000.0
-    ref_res_keep: [ls-68980, ls-64223, ls-58669, ls-58869, ls-56815, ls-56599, ls-62263,  ls-58959, ls-58063, ls-45808, ls-50936, ls-52001, ls-46254, ls-54770, ls-53644, ls-38499, ls-13307, ls-32263, ls-31144, ls-28440,  ls-16225, ls-16263, ls-5817, ls-3502, ls-3207, ls-3159,  ls-3829, ls-2065, ls-2334, ls-2143 ]
-  osm:
-    path: source_files/osm_dams_all.gpkg
-    layer: osm_dams_all
-    filter_col: waterway
-    filter_val: dam
-  dem:
-    path: source_files/USGS_Seamless_DEM_13.vrt
-    prefer_crs_of_dem: True
-    band: 1
-    nodata: null
-  nwm_lakes:
-    prep_nwm_lakes: False # set to true if you want to do this, or it will run if file not found
-    input_path: "source_files/nwm_patch_conus_nextgen.gpkg"
-    layer: "lakes"
-    buffer_size_m: 500
-    output_path: "source_files/nwm_lakes.gpkg"
-    lakes_keep: [10998421, 11002485, 10998695, 10998319, 10998263, 10998695, 21638156, 166899333, 18415569, 120052349, 11629443, 167671349, 19268768, 17999940, 17951023, 120052740, 4620258, 16729991, 1514163, 20052547, 24005647 ]
-  rules:
-    max_waterbody_nearest_dist_m: 1000.0
-    min_area_sqkm: 0.2
+
 
 gages:
   gages:
@@ -329,13 +311,31 @@ gages:
         path: routelink/RouteLink_CONUS_EPSG4326.gpkg
         gage_source_crs: EPSG:4326
         id_col_name: gages
+      rfc:
+        path: rfc/nwps_all_gauges_report.csv
+        id_col_name: nws shef id
+        status_col_name: forecast status
+        x_col_name: longitude
+        y_col_name: latitude
+        gage_source_crs: EPSG:4326
+      nwm_rfc:
+        path: rfc/reservoir_index_AnA.nc
+        rfc_id_col: 'rfc_gage_id'
+        usace_id_col: 'usace_gage_id'
+      usbr:
+        path: other/usbr.gpkg
+        id_col_name: 'locId'
+      usace:
+        path: other/usace_crosswalk.gpkg
+        id_col_name: location
+      canada_great_lakes: True
     target:
       crs: EPSG:5070
       snap_tolerance_m: 100.0
       update_existing: True
       exclude_ids: ["15056210", "15493000"]
-      out_gpkg: gages/gages_v1.gpkg
-      gpkg_layer_name: gages_v1
+      out_gpkg: gages/gages_v1.1.gpkg
+      gpkg_layer_name: gages_v1.1
 
   ###--------------------------------------------
   ## A file for USGS upstream area and basins shapefiles
@@ -356,7 +356,7 @@ gages:
    max_workers: null                  # None: if serial
    USGS_NLDI_crs: EPSG:4326      # usgs crs used in NLDI API. more info: https://waterdata.usgs.gov/blog/nldi-intro/
    work_crs: EPSG:5070           # an area-equal crs to calculate buffers and distances
-
+   override_fp_path: other/override_gage_flowpaths.csv # override fp/vfp for gage with values in table
 # --------------------------------------------------
 # flowpath crosswalk (fp_crosswalk)
 # --------------------------------------------------
@@ -390,14 +390,119 @@ validate_hf:
 # lakes
 #---------------------------------------------------
 lakes:
-  associate_flowpaths: True # this will run the flowpath association
-  input_path: "data/lakes/input/nwm_lakes_sconus_input.gpkg"
-  input_layer: "nwm_lakes"
-  processed_path: "data/lakes/output/sconus_lakes_fp_associated.gpkg" # can be empty or populated
-  flowpath_association_method: "polygon_outlet" # "nearest_point" or "polygon_outlet"
-  populate_hydaulics: True
-  id_field: "newID"
-  search_radius_m: 25000
-  attrib_src_path: "data/lakes/input/nwm_patch_conus_nextgen.gpkg" # file to get attributes from
-  attrib_src_layer: "lakes"
-  attrib_src_key: "lake_id"
+  input_dir: "./data/sconus/lakes/"
+  vfp_lake_crosswalk: True
+  calculate_elevation: True
+  use_cached_lakes: False
+  output_comid_field: "lake_id"
+  lakes_path: "output/sconus_lakes.gpkg"
+  validate_duplicates: True # flag to search for duplicate lake points during lakes validation. Defaults to true
+  save_duplicate_gpkgs: False # flag to (in addition to normal output) save the resulting duplicate lake points/polygons as geopackages. Defaults to false
+  nwm:
+    run: True
+    associate_flowpaths: True # this will run the flowpath association
+    improve_placement_ref_res: True # this takes 20-30 minutes. Turn off for speed or if placement not important
+    improve_placement_path: "output/nwm_lakes_improved_placement.gpkg"
+    use_cached_improve_placement: False # change to true to skip if you have already built
+    path: "input/nwm_lakes_sconus_input.gpkg"
+    buffered_path: "input/nwm_lakes_sconus_input_500m_buffer.gpkg" # source path, with polygons buffered out (for validating duplicate lake points). LakesConfig will inject preceding input path.
+    layer: "nwm_lakes"
+    fp_associated_path: "output/sconus_lakes_fp_associated.gpkg" # can be empty or populated
+    flowpath_association_method: "polygon_outlet" # "nearest_point" or "polygon_outlet"
+    id_field: "newID"
+    output_id_field: "lake_id"
+    search_radius_m: 25000.0
+    intersection_length_min_m: 3.0
+    attrib_src_path: "input/nwm_patch_conus_nextgen.gpkg" # file to get attributes from
+    attrib_src_layer: "lakes"
+    attrib_src_key: "lake_id"
+    max_refres_search_distance_m: 500.0
+  adhoc:
+    run: True
+    path: "input/adhoc_lakes.gpkg"
+    layer: "adhoc_lakes"
+    ref_wb_field: ref_waterbodies_only
+  usbr:
+    run: True
+    path: input/usbr_lake_crosswalk.gpkg
+    id_field: locId
+    lake_id_field: lake_id
+  ref_res:
+    run: True
+    path: input/reference-reservoirs-v1.gpkg
+    layer: reference-reservoirs-v1
+    src_crs: null
+    output_crs: EPSG:5070
+    distance_to_fp_col: distance_to_fp_m
+    wb_area_col: wb_areasqkm
+    ref_wb_id_col: ref_fab_wb
+    min_wb_area_sqkm: 0.2
+    max_distance_m: 1000.0
+  ref_wb:
+    run: True
+    path: input/reference_waterbodies.gpkg
+    layer: reference_waterbodies
+    src_crs: null
+    output_crs: EPSG:5070
+    id_field: comid
+    flowpath_association_method: "polygon_outlet"
+    search_radius_m: 25000.0
+    intersection_length_min_m: 3.0
+  nid:
+    path: input/NID2019_U.csv
+  dem:
+    path: input/COP90_DEM_SuperCONUS.tif
+    nodata: -99999
+  great_lakes:
+    superior:
+      lake_id: "4800002"
+      fp_id: 1278348162056612
+      virtual_fp_id: 1278346877373953
+      site_no: "04127885"
+    mi_huron:
+      lake_id: "4800004"
+      fp_id: 1276364270499315
+      virtual_fp_id: 1276364270423160
+      site_no: "04159130"
+    erie:
+      lake_id: "4800006"
+      fp_id: 1286192735893685
+      virtual_fp_id: 1286154743979494
+      site_no: "02HA013"
+    ontario:
+      lake_id: "4800007"
+      fp_id: 1287248237297035
+      virtual_fp_id: 1287248166320950
+      site_no: "IJC"
+
+res_da:
+  input_dir: "./data/sconus/lakes/"
+  lake_id_field: "lake_id"
+  gage_id_field: "site_no"
+  da_type_field: "da_type"
+  great_lakes: True
+  generate_additional_crosswalk: False
+  all_level_pool: False
+  adhoc:
+    run: True
+    path: "input/adhoc_lakes.gpkg"
+    layer: "adhoc_lakes"
+    rfc_field: "locationId"
+    lake_id_field: "lake_id"
+    null_value: -99999
+  res_crosswalk:
+    path: "input/reservoir_index_AnA.nc"
+  active_rfc:
+    path: input/nwps_all_gauges_report.csv
+    id_field: nws shef id
+  usace:
+    run: True
+    path: input/usace_crosswalk.gpkg
+    id_field: location
+    lake_id_field: lake_id
+  usbr:
+    run: True
+    path: input/usbr_lake_crosswalk.gpkg
+    id_field: locId
+    lake_id_field: lake_id
+  usgs_fix_list: ['137462010', '208250410', '21556525']

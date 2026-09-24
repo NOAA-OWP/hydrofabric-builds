@@ -1,6 +1,6 @@
 # Settings
 set dotenv-load := true
-oconus-version := "0.1.5"
+oconus-version := "0.1.8"
 
 alias download := sync
 alias download-ak := sync-ak
@@ -19,8 +19,6 @@ sync:
     aws s3 sync s3://edfs-data/reference/super_conus/ ./data/reference/ --exclude "*" --include "reference_divides.parquet" --include "reference_flowpaths.parquet"
     # Gages
     aws s3 sync s3://edfs-data/gages/ ./data/gages
-    # Reference Reservoirs
-    aws s3 sync s3://edfs-data/reservoirs/ ./data/reservoirs
     # Flowpath Attributes
     aws s3 sync s3://edfs-data/reference/super_conus/ ./data/flowpath-attributes/ --exclude "*" --include "Y_bf_predictions.parquet" --include "TW_bf_predictions.parquet" --include "r_predictions.parquet"
     # Divide Attributes
@@ -30,7 +28,7 @@ sync:
     # NHD
     aws s3 sync s3://edfs-data/nhd/ ./data/reference/ --exclude="*" --include "nwm_flows.gpkg"
     # Lakes
-    aws s3 sync s3://edfs-data/lakes/ ./data/lakes
+    aws s3 sync s3://edfs-data/lakes/sconus ./data/sconus/lakes
 
 build-conus: (build "configs/example_config.yaml")
 
@@ -40,8 +38,6 @@ sync-ak:
     aws s3 sync s3://edfs-data/reference-builds/ak/ ./data/reference/ --exclude "*" --include "ak_{{oconus-version}}_reference_divides.parquet" --include "ak_{{oconus-version}}_reference_flowpaths.parquet"
     # Gages - same as CONUS
     aws s3 sync s3://edfs-data/gages/ ./data/gages
-    # Reference Reservoirs
-    # TBD
     # Flowpath Attributes
     # None needed
     # Divide Attributes
@@ -51,7 +47,7 @@ sync-ak:
     # NHD
     aws s3 cp s3://edfs-data/nhd/nwm_flows_alaska_nwmv3_ID_v2.gpkg ./data/reference/nwm_flows_alaska_nwmv3_ID_v2.gpkg
     # Lakes
-    aws s3 sync s3://edfs-data/lakes/ ./data/lakes
+    aws s3 sync s3://edfs-data/lakes/ak ./data/ak/lakes
 
 build-ak: (build "configs/example_ak_config.yaml")
 
@@ -61,8 +57,6 @@ sync-hi:
     aws s3 sync s3://edfs-data/reference-builds/hi/ ./data/reference/ --exclude "*" --include "hi_{{oconus-version}}_reference_divides.parquet" --include "hi_{{oconus-version}}_reference_flowpaths.parquet"
     # Gages - same as CONUS
     aws s3 sync s3://edfs-data/gages/ ./data/gages
-    # Reference Reservoirs
-    # TBD
     # Flowpath Attributes
     # None needed
     # Divide Attributes
@@ -71,7 +65,8 @@ sync-hi:
     # NHD
     aws s3 sync s3://edfs-data/nhd/ ./data/reference/ --exclude="*" --include "nwm_flows.gpkg"
     # Lakes
-    aws s3 sync s3://edfs-data/lakes/ ./data/lakes
+    aws s3 sync s3://edfs-data/lakes/hi ./data/hi/lakes
+
 
 build-hi: (build "configs/example_hi_config.yaml")
 
@@ -91,6 +86,6 @@ sync-prvi:
     # NHD
     aws s3 sync s3://edfs-data/nhd/ ./data/reference/ --exclude="*" --include "nwm_flows.gpkg"
     # Lakes
-    aws s3 sync s3://edfs-data/lakes/ ./data/lakes
+    aws s3 sync s3://edfs-data/lakes/prvi ./data/prvi/lakes
 
 build-prvi: (build "configs/example_prvi_config.yaml")

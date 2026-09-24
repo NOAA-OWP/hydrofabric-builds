@@ -1,0 +1,54 @@
+{
+  "description": "Lakes: National Inventory of Dams (NID) inputs to improve hydaulic paramters. NID is available for Reference Reservoirs data.",
+  "properties": {
+    "path": {
+      "default": "input/NID2019_U.csv",
+      "description": "Source path. When using defaults, WaterbodiesConfig will inject preceding input path.",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "src_crs": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": "EPSG:4326",
+      "description": "Source CRS",
+      "title": "Src Crs"
+    },
+    "output_crs": {
+      "default": "EPSG:5070",
+      "description": "Output CRS",
+      "title": "Output Crs",
+      "type": "string"
+    },
+    "drop_states": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": [
+        "AK",
+        "HI",
+        "PR",
+        "GU"
+      ],
+      "description": "States to drop from NID",
+      "title": "Drop States"
+    }
+  },
+  "title": "NIDInputs",
+  "type": "object"
+}

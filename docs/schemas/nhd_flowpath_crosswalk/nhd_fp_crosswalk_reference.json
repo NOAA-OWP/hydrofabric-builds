@@ -1,0 +1,12 @@
+{
+  "description": "fp_crosswalk: reference (file1) network",
+  "properties": {
+    "id_col": {
+      "default": "flowpath_id",
+      "title": "Id Col",
+      "type": "string"
+    }
+  },
+  "title": "FPCrosswalkReference",
+  "type": "object"
+}

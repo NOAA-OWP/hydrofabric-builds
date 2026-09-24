@@ -1,0 +1,18 @@
+{
+  "description": "Describes table of active NWS gages for reservoir DA. This is optionally used in gages.\n\nRetrieved from https://water.noaa.gov/about/data-and-web-services-catalog on 6/15/26",
+  "properties": {
+    "path": {
+      "default": "input/nwps_all_gauges_report.csv",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "id_field": {
+      "default": "nws shef id",
+      "title": "Id Field",
+      "type": "string"
+    }
+  },
+  "title": "ActiveRFC",
+  "type": "object"
+}

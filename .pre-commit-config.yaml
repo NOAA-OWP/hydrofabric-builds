@@ -22,7 +22,7 @@ repos:
     rev: v1.17.0
     hooks:
       - id: mypy
-        additional_dependencies: ["types-PyYAML==6.0.12.20250516"]
+        additional_dependencies: ["types-PyYAML==6.0.12.20250516", "types-requests==2.32.4.20250611"]
 
   - repo: https://github.com/kynan/nbstripout
     rev: 0.8.1

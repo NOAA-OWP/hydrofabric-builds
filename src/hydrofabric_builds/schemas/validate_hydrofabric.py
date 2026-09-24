@@ -240,3 +240,36 @@ class Domain(enum.Enum):
     AK = "AK"
     HI = "HI"
     PRVI = "PRVI"
+
+
+class VegTypes:
+    """Dictionary mapping vegetation type to description"""
+
+    veg_types = {
+        1: "URBAN_AND_BUILT_UP_LAND",
+        2: "DRYLAND_CROPLAND_AND_PASTURE",
+        3: "IRRIGATED_CROPLAND_AND_PASTURE",
+        4: "MIXED_DRYLAND_IRRIGATED_CROPLAND_AND_PASTURE",
+        5: "CROPLAND_GRASSLAND_MOSAIC",
+        6: "CROPLAND_WOODLAND_MOSAIC",
+        7: "GRASSLAND",
+        8: "SHRUBLAND",
+        9: "MIXED_SHRUBLAND_GRASSLAND",
+        10: "SAVANNA",
+        11: "DECIDUOUS_BROADLEAF_FOREST",
+        12: "DECIDUOUS_NEEDLELEAF_FOREST",
+        13: "EVERGREEN_BROADLEAF_FOREST",
+        14: "EVERGREEN_NEEDLELEAF_FOREST",
+        15: "MIXED_FOREST",
+        16: "WATER_BODIES",
+        17: "HERBACEOUS_WETLAND",
+        18: "WOODED_WETLAND",
+        19: "BARREN_OR_SPARSELY_VEGETATED",
+        20: "HERBACEOUS_TUNDRA",
+        21: "WOODED_TUNDRA",
+        22: "MIXED_TUNDRA",
+        23: "BARE_GROUND_TUNDRA",
+        24: "SNOW_OR_ICE",
+        25: "PLAYA",
+        26: "LAVA",
+    }

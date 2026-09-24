@@ -8,88 +8,10 @@ import pandas as pd
 import pytest
 import rasterio
 from rasterio.transform import from_origin
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
 
-from hydrofabric_builds.reservoirs.data_prep.DEM_helper import extract_elev_at_points, mean_dem_over_polygon
-from hydrofabric_builds.reservoirs.data_prep.hydraulics import populate_hydraulics, populate_nwm_hydaulics
-from hydrofabric_builds.schemas.hydrofabric import NWMDefaultHydraulics
-
-
-def test_populate_nwm_hydraulics_single_row_example(tmp_path: Path) -> None:
-    """Replicate a single row of post-association output."""
-    input_gdf = gpd.GeoDataFrame(
-        pd.DataFrame(
-            {
-                "Shape_Leng": [7696.213134],
-                "lake_id": [491],
-                "Shape_Le_1": [7696.213134],
-                "Shape_Area": [1480298.47499],
-                "OBJECTID": [np.nan],
-                "fp_id": [220076.0],
-                "buffer_radius": [0.0],
-                "LkArea": [np.nan],
-                "LkMxE": [np.nan],
-                "WeirC": [np.nan],
-                "WeirL": [np.nan],
-                "WeirE": [np.nan],
-                "OrificeC": [np.nan],
-                "OrificeA": [np.nan],
-                "OrificeE": [np.nan],
-                "Dam_Length": [np.nan],
-                "ifd": [np.nan],
-                "reservoir_index_AnA": [np.nan],
-                "reservoir_index_Extended_AnA": [np.nan],
-                "reservoir_index_GDL_AK": [np.nan],
-                "reservoir_index_Medium_Range": [np.nan],
-                "reservoir_index_Short_Range": [np.nan],
-                "geometry": "POINT (2106785.561567098 2885482.6341993436)",
-            }
-        )
-    )
-    expected_gdf = gpd.GeoDataFrame(
-        pd.DataFrame(
-            {
-                "Shape_Leng": [7696.213134],
-                "lake_id": [491],
-                "Shape_Le_1": [7696.213134],
-                "Shape_Area": [1480298.47499],
-                "OBJECTID": [np.nan],
-                "fp_id": [220076.0],
-                "buffer_radius": [0.0],
-                "LkArea": [1.48029847499],
-                "LkMxE": [np.nan],
-                "WeirC": [NWMDefaultHydraulics.WeirC.value],
-                "WeirL": [NWMDefaultHydraulics.WeirL.value],
-                "WeirE": [np.nan],
-                "OrificeC": [NWMDefaultHydraulics.OrificeC.value],
-                "OrificeA": [NWMDefaultHydraulics.OrificeA.value],
-                "OrificeE": [np.nan],
-                "Dam_Length": [NWMDefaultHydraulics.WeirL.value],
-                "ifd": [NWMDefaultHydraulics.ifd.value],
-                "reservoir_index_AnA": [np.nan],
-                "reservoir_index_Extended_AnA": [np.nan],
-                "reservoir_index_GDL_AK": [np.nan],
-                "reservoir_index_Medium_Range": [np.nan],
-                "reservoir_index_Short_Range": [np.nan],
-                "geometry": "POINT (2106785.561567098 2885482.6341993436)",
-            }
-        )
-    )
-
-    tmp_gpkg_path = tmp_path / "nwm_hydraulics.gpkg"
-    input_gdf.to_file(tmp_gpkg_path)
-
-    result_gdf = populate_nwm_hydaulics(tmp_gpkg_path)
-
-    for col in result_gdf.columns:
-        if pd.isna(result_gdf[col][0]):
-            assert pd.isna(expected_gdf[col][0])
-        elif pd.isna(expected_gdf[col][0]):
-            assert pd.isna(result_gdf[col][0])
-        elif isinstance(result_gdf[col][0], float):
-            assert pytest.approx(result_gdf[col][0], rel=1e-6) == expected_gdf[col][0]
-        else:
-            assert expected_gdf[col][0] == result_gdf[col][0]
+from hydrofabric_builds.lakes.helpers import point_elevation
+from hydrofabric_builds.lakes.hydraulics import _populate_hydraulics
 
 
 def test_populate_hydraulics_single_row_example() -> None:
@@ -117,7 +39,7 @@ def test_populate_hydraulics_single_row_example() -> None:
         }
     )
 
-    out = populate_hydraulics(df)
+    out = _populate_hydraulics(df)
 
     assert len(out) == 1
     row = out.iloc[0]
@@ -125,8 +47,8 @@ def test_populate_hydraulics_single_row_example() -> None:
     # effective height (H_m) = structural_height
     assert pytest.approx(row["H_m"], rel=1e-6) == 22.0
 
-    # area: ref_area_sqkm * 1e6
-    assert pytest.approx(row["LkArea"], rel=1e-6) == 0.5 * 1_000_000.0
+    # area: ref_area_sqkm (sqkm)
+    assert pytest.approx(row["LkArea"], rel=1e-6) == 0.5
 
     # WeirL (and Dam_Length) should fall back to dam_length
     assert pytest.approx(row["WeirL"], rel=1e-6) == 85.0
@@ -141,14 +63,211 @@ def test_populate_hydraulics_single_row_example() -> None:
     assert pytest.approx(row["WeirE"], rel=1e-6) == 1515.0
     # LkMxE = wb + 0.10 * H = 1517.2
     assert pytest.approx(row["LkMxE"], rel=1e-6) == 1515.0 + 0.10 * 22.0
-    # OrficeE = base + 0.15 * H = 1503.3
-    assert pytest.approx(row["OrficeE"], rel=1e-6) == 1500.0 + 0.15 * 22.0
+    # OrificeE = base + 0.15 * H = 1503.3
+    assert pytest.approx(row["OrificeE"], rel=1e-6) == 1500.0 + 0.15 * 22.0
 
-    # OrficeA uses height bin: 10 ≤ H < 30 → orficeA_med (default 0.9)
-    assert pytest.approx(row["OrficeA"], rel=1e-6) == 0.9
+    # OrificeA uses height bin: 10 ≤ H < 30 → OrificeA_med (default 0.9)
+    assert pytest.approx(row["OrificeA"], rel=1e-6) == 0.9
 
     # ifd constant
     assert pytest.approx(row["ifd"], rel=1e-6) == 0.899
+
+
+def test_populate_hydraulics_retain_default() -> None:
+    """Default values are provided and preferred over calculated."""
+    df = pd.DataFrame(
+        {
+            "dam_id": ["ls-1025"],
+            "nidid": ["NID123"],
+            "dam_type": ["Concrete"],
+            "spillway_type": ["Ogee gated"],
+            "structural_height": [22.0],
+            "dam_length": [85.0],
+            "ref_area_sqkm": [0.50],
+            "surface_area": [np.nan],
+            "ref_elev": [1515.0],
+            "osm_wb_elev": [np.nan],
+            "dam_elev": [1500.0],
+            # add storage so storage_m3 has correct length
+            "nid_storage": [1000.0],  # acre-ft (value arbitrary for this test)
+            "normal_storage": [np.nan],
+            "max_storage": [np.nan],
+            # optional extras, should be safely ignored if missing
+            "osm_ww_poly": [None],
+            "ref_fab_wb": [None],
+            "LkArea": [200.0],
+            "LkMxE": [305.0],
+            "WeirC": [0.4],
+            "WeirL": [10.0],
+            "WeirE": [304.0],
+            "OrificeC": [0.1],
+            "OrificeA": [1.0],
+            "OrificeE": [304.0],
+            "Dam_Length": [10.0],
+            "ifd": [0.899],
+        }
+    )
+
+    out = _populate_hydraulics(df)
+
+    assert len(out) == 1
+    row = out.iloc[0]
+
+    # area: ref_area_sqkm (sqkm)
+    assert pytest.approx(row["LkArea"], rel=1e-6) == 200.0
+
+    # WeirL (and Dam_Length) should fall back to dam_length
+    assert pytest.approx(row["WeirL"], rel=1e-6) == 10.0
+    assert pytest.approx(row["Dam_Length"], rel=1e-6) == 10.0
+
+    # WeirC:
+    assert pytest.approx(row["WeirC"], rel=1e-6) == 0.4
+
+    # Keep inputs
+    assert pytest.approx(row["WeirE"], rel=1e-6) == 304.0
+    # LkMxE
+    assert pytest.approx(row["LkMxE"], rel=1e-6) == 305.0
+    # OrificeE
+    assert pytest.approx(row["OrificeE"], rel=1e-6) == 304.0
+    # OrificeA
+    assert pytest.approx(row["OrificeA"], rel=1e-6) == 1.0
+    # ifd constant
+    assert pytest.approx(row["ifd"], rel=1e-6) == 0.899
+
+
+def test_populate_hydraulics__weir_e_condition() -> None:
+    """Condition where WereE < OrificeE. Replace WeirE with OrificeE"""
+    df = pd.DataFrame(
+        {
+            "dam_id": [None],
+            "nidid": [None],
+            "dam_type": [None],
+            "spillway_type": [None],
+            "structural_height": [np.nan],
+            "dam_length": [np.nan],
+            "ref_area_sqkm": [0.50],
+            "surface_area": [np.nan],
+            "ref_elev": [np.nan],
+            "osm_wb_elev": [np.nan],
+            "dam_elev": [np.nan],
+            # add storage so storage_m3 has correct length
+            "nid_storage": [np.nan],  # acre-ft (value arbitrary for this test)
+            "normal_storage": [np.nan],
+            "max_storage": [np.nan],
+            # optional extras, should be safely ignored if missing
+            "osm_ww_poly": [None],
+            "ref_fab_wb": [None],
+            "LkArea": [200.0],
+            "LkMxE": [305.0],
+            "WeirC": [0.4],
+            "WeirL": [10.0],
+            "WeirE": [295.0],
+            "OrificeC": [0.1],
+            "OrificeA": [1.0],
+            "OrificeE": [304.0],
+            "Dam_Length": [10.0],
+            "ifd": [0.899],
+        }
+    )
+
+    out = _populate_hydraulics(df)
+
+    assert len(out) == 1
+    row = out.iloc[0]
+
+    # WeirE is less than OrificeE. WeirE is changed to match.
+    assert pytest.approx(row["WeirE"], rel=1e-6) == 304.0
+    assert pytest.approx(row["OrificeE"], rel=1e-6) == 304.0
+
+
+def test_populate_hydraulics__lxmxe_condition() -> None:
+    """Conidtion where LkMxE < WeirE. LkMxE is replaced with WeirE."""
+    df = pd.DataFrame(
+        {
+            "dam_id": [None],
+            "nidid": [None],
+            "dam_type": [None],
+            "spillway_type": [None],
+            "structural_height": [np.nan],
+            "dam_length": [np.nan],
+            "ref_area_sqkm": [0.50],
+            "surface_area": [np.nan],
+            "ref_elev": [np.nan],
+            "osm_wb_elev": [np.nan],
+            "dam_elev": [np.nan],
+            # add storage so storage_m3 has correct length
+            "nid_storage": [np.nan],  # acre-ft (value arbitrary for this test)
+            "normal_storage": [np.nan],
+            "max_storage": [np.nan],
+            # optional extras, should be safely ignored if missing
+            "osm_ww_poly": [None],
+            "ref_fab_wb": [None],
+            "LkArea": [200.0],
+            "LkMxE": [200.0],
+            "WeirC": [0.4],
+            "WeirL": [10.0],
+            "WeirE": [304.0],
+            "OrificeC": [0.1],
+            "OrificeA": [1.0],
+            "OrificeE": [304.0],
+            "Dam_Length": [10.0],
+            "ifd": [0.899],
+        }
+    )
+
+    out = _populate_hydraulics(df)
+
+    assert len(out) == 1
+    row = out.iloc[0]
+
+    # WeirE is less than OrificeE. WeirE is changed to match.
+    assert pytest.approx(row["WeirE"], rel=1e-6) == 304.0
+    assert pytest.approx(row["LkMxE"], rel=1e-6) == 304.0
+
+
+def test_populate_hydraulics__null_orifice() -> None:
+    """OrificeE is null and replaced with WeirE"""
+    df = pd.DataFrame(
+        {
+            "dam_id": [None],
+            "nidid": [None],
+            "dam_type": [None],
+            "spillway_type": [None],
+            "structural_height": [np.nan],
+            "dam_length": [np.nan],
+            "ref_area_sqkm": [0.50],
+            "surface_area": [np.nan],
+            "ref_elev": [np.nan],
+            "osm_wb_elev": [np.nan],
+            "dam_elev": [np.nan],
+            # add storage so storage_m3 has correct length
+            "nid_storage": [np.nan],  # acre-ft (value arbitrary for this test)
+            "normal_storage": [np.nan],
+            "max_storage": [np.nan],
+            # optional extras, should be safely ignored if missing
+            "osm_ww_poly": [None],
+            "ref_fab_wb": [None],
+            "LkArea": [200.0],
+            "LkMxE": [305.0],
+            "WeirC": [0.4],
+            "WeirL": [10.0],
+            "WeirE": [304.0],
+            "OrificeC": [0.1],
+            "OrificeA": [1.0],
+            "OrificeE": [np.nan],
+            "Dam_Length": [10.0],
+            "ifd": [0.899],
+        }
+    )
+
+    out = _populate_hydraulics(df)
+
+    assert len(out) == 1
+    row = out.iloc[0]
+
+    # WeirE is less than OrificeE. WeirE is changed to match.
+    assert pytest.approx(row["WeirE"], rel=1e-6) == 304.0
+    assert pytest.approx(row["OrificeE"], rel=1e-6) == 304.0
 
 
 def test_populate_hydraulics_hazard_adjustment() -> None:
@@ -176,8 +295,8 @@ def test_populate_hydraulics_hazard_adjustment() -> None:
         }
     )
 
-    out_no_hazard = populate_hydraulics(df, use_hazard=False)
-    out_hazard = populate_hydraulics(df, use_hazard=True)
+    out_no_hazard = _populate_hydraulics(df, use_hazard=False)
+    out_hazard = _populate_hydraulics(df, use_hazard=True)
 
     # WeirL should increase slightly for High (H) and Significant (S), unchanged for Low
     base_L = out_no_hazard["WeirL"].iloc[0]
@@ -189,11 +308,11 @@ def test_populate_hydraulics_hazard_adjustment() -> None:
     assert L_S > base_L
     assert pytest.approx(L_L, rel=1e-6) == base_L
 
-    # OrficeA should similarly be nudged up for H/S
-    base_A = out_no_hazard["OrficeA"].iloc[0]
-    A_H = out_hazard.loc[out_hazard["dam_id"] == "h1", "OrficeA"].iloc[0]
-    A_S = out_hazard.loc[out_hazard["dam_id"] == "s1", "OrficeA"].iloc[0]
-    A_L = out_hazard.loc[out_hazard["dam_id"] == "l1", "OrficeA"].iloc[0]
+    # OrificeA should similarly be nudged up for H/S
+    base_A = out_no_hazard["OrificeA"].iloc[0]
+    A_H = out_hazard.loc[out_hazard["dam_id"] == "h1", "OrificeA"].iloc[0]
+    A_S = out_hazard.loc[out_hazard["dam_id"] == "s1", "OrificeA"].iloc[0]
+    A_L = out_hazard.loc[out_hazard["dam_id"] == "l1", "OrificeA"].iloc[0]
 
     assert A_H > base_A
     assert A_S > base_A
@@ -228,20 +347,6 @@ def _make_test_raster(tmp_path: str | Path, data: float = 100.0, crs: str = "EPS
     return raster_path
 
 
-def test_mean_dem_over_polygon_constant(tmp_path: str | Path) -> None:
-    """mean_dem_over_polygon should recover the constant DEM value over the polygon."""
-    dem_path = _make_test_raster(tmp_path, data=123.0)
-
-    # a polygon that fully covers the DEM extent
-    poly = Polygon([(0, 0), (0, 2), (2, 2), (2, 0)])
-    gdf = gpd.GeoDataFrame({"id": [1]}, geometry=[poly], crs="EPSG:5070")
-
-    with rasterio.open(dem_path) as src:
-        val = mean_dem_over_polygon(src, gdf.geometry.iloc[0])
-
-    assert pytest.approx(val, rel=1e-6) == 123.0
-
-
 def test_extract_elev_at_points(tmp_path: str | Path) -> None:
     """extract_elev_at_points should sample correct DEM values at point locations."""
     # 2x2 raster with distinct values
@@ -259,7 +364,7 @@ def test_extract_elev_at_points(tmp_path: str | Path) -> None:
         crs="EPSG:5070",
     )
 
-    vals = extract_elev_at_points(dem_path, pts)
+    vals = point_elevation(dem_path, pts)
     assert vals.shape == (4,)
     assert pytest.approx(vals[0], rel=1e-6) == 10.0
     assert pytest.approx(vals[1], rel=1e-6) == 20.0

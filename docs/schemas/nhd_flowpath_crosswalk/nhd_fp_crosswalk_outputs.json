@@ -1,0 +1,13 @@
+{
+  "description": "fp_crosswalk: final matches table inside a GPKG (no geometry is fine)",
+  "properties": {
+    "path": {
+      "default": "data/fp_crosswalk_matches.parquet",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    }
+  },
+  "title": "FPCrosswalkOutputs",
+  "type": "object"
+}

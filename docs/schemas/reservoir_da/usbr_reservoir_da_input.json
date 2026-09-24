@@ -1,0 +1,32 @@
+{
+  "description": "USBR : lake_id crosswalk for reservoir DA.",
+  "properties": {
+    "path": {
+      "default": "input/usbr_lake_crosswalk.gpkg",
+      "description": "Source path. ResDAConfig will inject preceding input path.",
+      "format": "path",
+      "title": "Path",
+      "type": "string"
+    },
+    "run": {
+      "default": false,
+      "description": "Flag to use USBR reservoir input. Must be set to false if file is not present.",
+      "title": "Run",
+      "type": "boolean"
+    },
+    "lake_id_field": {
+      "default": "lake_id",
+      "description": "Field containing common lake COMID",
+      "title": "Lake Id Field",
+      "type": "string"
+    },
+    "id_field": {
+      "default": "locId",
+      "description": "Field containing shared reservoir/gage ID.",
+      "title": "Id Field",
+      "type": "string"
+    }
+  },
+  "title": "USBRResDAInput",
+  "type": "object"
+}
