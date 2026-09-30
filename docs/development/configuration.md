@@ -1,0 +1,4 @@
+# Configuration
+The NHF is built from a config or "recipe" YAML that is validated by pydantic models for correct schema and data type inputs. The config drives which build steps are run and what data is used. The `example_[domain]_config.yaml` are the most up to date NHF (v1.3.2 at time of writing). To view schemas of each data model, visit `docs/schemas` for printed outputs or `src/hydrofabric_builds/schemas/hydrofabric.py` and `src/hydrofabric_builds/config.py` for code. For development, we recommend copying the example config, editing the name, and changing as needed. The example_config will be commited to repo and should be finalized with all steps set to true.
+
+To minimize changes to configuration for running v.1.3.2, data should be stored in the repository hydrofabric-builds/data folder. The NHF data archive will unpack into the folder hierarchy as described by the configuration files.

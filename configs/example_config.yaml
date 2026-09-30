@@ -1,16 +1,23 @@
+#---------------------------------------------------
 # global settings
+#---------------------------------------------------
 output_dir: data/
 crs: EPSG:5070
 #output_name: "nhf.gpkg" # If not specified, will default to version
 
-# hf builds
+#---------------------------------------------------
+# build process
+#---------------------------------------------------
 build:
   reference_divides_path: data/reference/reference_divides.parquet
   reference_flowpaths_path: data/reference/reference_flowpaths.parquet
   #debug_outlet_count: 2000 # If specified, only the total amount of rivers here will be built
   divide_aggregation_threshold: 3.0
 
-# choose tasks to run
+#---------------------------------------------------
+# task selection
+#---------------------------------------------------
+# Choose which build pipeline steps will be run based on what is already available in your file (output_name)
 tasks:
   build_hydrofabric: True
   divide_attributes: True
@@ -22,23 +29,27 @@ tasks:
   validate_hf: True
   res_da: True
 
-# flowpaths
+#---------------------------------------------------
+# flowpath attributes
+#---------------------------------------------------
 flowpath_attributes:
   flowpath_id: fp_id
-  use_stream_order: True
-  dem_path: data/divide-attributes/usgs/usgs_250m_dem_5070.tif
-  tw_path: data/flowpath-attributes/TW_bf_predictions.parquet
-  y_path: data/flowpath-attributes/Y_bf_predictions.parquet
-  r_path: data/flowpath-attributes/r_predictions.parquet
+  use_stream_order: True # use stream order to calculate attributes instead of defaults
+  dem_path: data/divide-attributes/usgs/usgs_250m_dem_5070.tif # DEM for elevation
+  tw_path: data/flowpath-attributes/TW_bf_predictions.parquet # RiverML top width predictions
+  y_path: data/flowpath-attributes/Y_bf_predictions.parquet # RiverML Y predictions
+  r_path: data/flowpath-attributes/r_predictions.parquet # RiverML Dingman's R predictions
 
+#---------------------------------------------------
 # divide attributes
+#---------------------------------------------------
 divide_attributes:
-  processes: 10
+  processes: 10 # number of multiprocessing processes to be run for zonal stats - no more than available cores
   data_dir: data/divide-attributes
   divide_id: div_id
   tmp_dir: data/tmp/divide-attributes
-  split_vpu: True
-  debug: False
+  split_vpu: True # split by VPU for multiprocessing
+  debug: False # save debug outputs
   attributes: # attributes must be specified - there are no defaults
     bexp1:
       file_name: nwm/bexp_0.tif
@@ -278,10 +289,12 @@ divide_attributes:
       field_name: surface_shortwave_albedo
 
 
-
+#---------------------------------------------------
+# gages
+#---------------------------------------------------
 gages:
   gages:
-    inputs:
+    inputs: # gage inputs
       usgs_discontinued:
         dir: usgs_gages_discontinued
         gage_source_crs: EPSG:4326
@@ -328,6 +341,10 @@ gages:
       usace:
         path: other/usace_crosswalk.gpkg
         id_col_name: location
+      run_of_river:
+        path: rfc/run_of_river_dams.gpkg
+        id_col_name: nwps_id
+        layer: run_of_river_dams
       canada_great_lakes: True
     target:
       crs: EPSG:5070
@@ -398,10 +415,11 @@ lakes:
   lakes_path: "output/sconus_lakes.gpkg"
   validate_duplicates: True # flag to search for duplicate lake points during lakes validation. Defaults to true
   save_duplicate_gpkgs: False # flag to (in addition to normal output) save the resulting duplicate lake points/polygons as geopackages. Defaults to false
-  nwm:
+  flowpath_association_buffer_m: 500.0
+  nwm: # NWM v3 lake polygons - retain all
     run: True
     associate_flowpaths: True # this will run the flowpath association
-    improve_placement_ref_res: True # this takes 20-30 minutes. Turn off for speed or if placement not important
+    improve_placement_ref_res: True # this folds reference reservoirs in to match them to NHF and exclude from ref reservoirs
     improve_placement_path: "output/nwm_lakes_improved_placement.gpkg"
     use_cached_improve_placement: False # change to true to skip if you have already built
     path: "input/nwm_lakes_sconus_input.gpkg"
@@ -417,17 +435,34 @@ lakes:
     attrib_src_layer: "lakes"
     attrib_src_key: "lake_id"
     max_refres_search_distance_m: 500.0
-  adhoc:
+  adhoc: # "adhoc: originally meant to be any additional lakes with crosswalk to ref wb, but ended up being only additional Ohio RFC
     run: True
     path: "input/adhoc_lakes.gpkg"
     layer: "adhoc_lakes"
-    ref_wb_field: ref_waterbodies_only
-  usbr:
+    ref_wb_field: ref_waterbodies_only # flag if the lake was in ref waterbodies and needs to be joined
+  usbr: # US bureau of reclamation dams from RISE API crosswalked to lake_id (COMID)
     run: True
     path: input/usbr_lake_crosswalk.gpkg
     id_field: locId
     lake_id_field: lake_id
-  ref_res:
+    ref_wb_field: ref_wb_lake # flag if the lake was in ref waterbodies and needs to be joined
+  low_head_dams: # low head dams from USACE low head dam inventory, crosswalked where possible or polygon was created if not (nid-###)
+    run: True
+    path: input/low_head_dams.gpkg
+    layer_polygon: low_head_dams_polygon
+    layer_point: low_head_dams_point
+    ref_wb_field: in_ref_wb # flag if the lake was in ref waterbodies and needs to be joined
+    id_field: lake_id
+    associate_flowpaths: True
+  run_of_river:  # Large RFC run of river dams crosswalked where possible or polygons created if not (ror-###)
+    run: True
+    path: input/run_of_river_dams.gpkg
+    layer_polygon: run_of_river_dams
+    layer_points: run_of_river_dams_points
+    associate_flowpaths: True
+    nid_surface_area_field: surface_area
+    id_field: lake_id
+  ref_res: # reference reservoirs, points with lake_id/comId (ref_fab_wb) added to lakes if meet criteria (min_wb_area_sqm, max_distance_m)
     run: True
     path: input/reference-reservoirs-v1.gpkg
     layer: reference-reservoirs-v1
@@ -438,7 +473,7 @@ lakes:
     ref_wb_id_col: ref_fab_wb
     min_wb_area_sqkm: 0.2
     max_distance_m: 1000.0
-  ref_wb:
+  ref_wb: # reference waterbodies, polygons with lake_id/COMID used for lakes needed that are not in nwm_lakes
     run: True
     path: input/reference_waterbodies.gpkg
     layer: reference_waterbodies
@@ -448,6 +483,7 @@ lakes:
     flowpath_association_method: "polygon_outlet"
     search_radius_m: 25000.0
     intersection_length_min_m: 3.0
+    associate_flowpaths: True
   nid:
     path: input/NID2019_U.csv
   dem:
@@ -475,34 +511,43 @@ lakes:
       virtual_fp_id: 1287248166320950
       site_no: "IJC"
 
+#---------------------------------------------------
+# reservoir data assimilation (DA)
+#---------------------------------------------------
 res_da:
   input_dir: "./data/sconus/lakes/"
   lake_id_field: "lake_id"
   gage_id_field: "site_no"
   da_type_field: "da_type"
   great_lakes: True
-  generate_additional_crosswalk: False
-  all_level_pool: False
-  adhoc:
+  generate_additional_crosswalk: False # unfinished feature that would generate additional crosswalk between lakes and gages
+  all_level_pool: False # sets to all level pool (e.g. OCONUS domains without res da info)
+  adhoc: # treated as Ohio RFC
     run: True
     path: "input/adhoc_lakes.gpkg"
     layer: "adhoc_lakes"
     rfc_field: "locationId"
     lake_id_field: "lake_id"
     null_value: -99999
-  res_crosswalk:
+  res_crosswalk: # reservoir crosswalk from NWM v3
     path: "input/reservoir_index_AnA.nc"
-  active_rfc:
+  active_rfc: # CSV from NWPS with active RFC, downloaded August 2026
     path: input/nwps_all_gauges_report.csv
     id_field: nws shef id
-  usace:
+  usace: # US Army Core of Engineers Crosswalk between NID and lake_id (COMID)
     run: True
     path: input/usace_crosswalk.gpkg
     id_field: location
     lake_id_field: lake_id
-  usbr:
+  usbr: # US bureau of reclamation dams from RISE API crosswalked to lake_id (COMID)
     run: True
     path: input/usbr_lake_crosswalk.gpkg
     id_field: locId
     lake_id_field: lake_id
+  run_of_river: # Large RFC run of river dams with new polygons created if no lake_id (COMID)
+    run: True
+    path: input/run_of_river_dams.gpkg
+    layer: run_of_river_dams_points
+    lake_id_field: lake_id
+    id_field: nwps_id
   usgs_fix_list: ['137462010', '208250410', '21556525']

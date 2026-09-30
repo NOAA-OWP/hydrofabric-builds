@@ -79,9 +79,7 @@
             "usgs_gage_id_field": "usgs_gage_id",
             "usgs_lake_id_field": "usgs_lake_id",
             "usace_gage_id_field": "usace_gage_id",
-            "usace_lake_id_field": "usace_lake_id",
-            "rfc_gage_id_field": "rfc_gage_id",
-            "rfc_lake_id_field": "rfc_lake_id"
+            "rfc_gage_id_field": "rfc_gage_id"
           },
           "description": "All field mappings for reservoir index file"
         }
@@ -116,26 +114,52 @@
           "title": "Usace Gage Id Field",
           "type": "string"
         },
-        "usace_lake_id_field": {
-          "default": "usace_lake_id",
-          "description": "USACE lake ID field in reservoir index file",
-          "title": "Usace Lake Id Field",
-          "type": "string"
-        },
         "rfc_gage_id_field": {
           "default": "rfc_gage_id",
           "description": "RFC gage ID in reservoir index",
           "title": "Rfc Gage Id Field",
           "type": "string"
-        },
-        "rfc_lake_id_field": {
-          "default": "rfc_lake_id",
-          "description": "RFC lake ID in reservoir index",
-          "title": "Rfc Lake Id Field",
-          "type": "string"
         }
       },
       "title": "ResCrosswalkFields",
+      "type": "object"
+    },
+    "RunOfRiverDAInput": {
+      "description": "Large RFC Run of River dam input. These will be DA scheme as RFC with run of river flag",
+      "properties": {
+        "path": {
+          "default": "input/run_of_river_dams.gpkg",
+          "description": "Source path. ResDAConfig will inject preceding input path.",
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "layer": {
+          "default": "run_of_river_dams_points",
+          "description": "Layer to use for run of river.",
+          "title": "Layer",
+          "type": "string"
+        },
+        "run": {
+          "default": false,
+          "description": "Flag to use reservoir DA reservoir input. Must be set to false if file is not present.",
+          "title": "Run",
+          "type": "boolean"
+        },
+        "lake_id_field": {
+          "default": "lake_id",
+          "description": "Field containing common lake COMID",
+          "title": "Lake Id Field",
+          "type": "string"
+        },
+        "id_field": {
+          "default": "nwps_id",
+          "description": "Field containing shared reservoir/gage ID.",
+          "title": "Id Field",
+          "type": "string"
+        }
+      },
+      "title": "RunOfRiverDAInput",
       "type": "object"
     },
     "USACEResDAInput": {
@@ -255,9 +279,7 @@
         "fields": {
           "lake_id_field": "lake_id",
           "rfc_gage_id_field": "rfc_gage_id",
-          "rfc_lake_id_field": "rfc_lake_id",
           "usace_gage_id_field": "usace_gage_id",
-          "usace_lake_id_field": "usace_lake_id",
           "usgs_gage_id_field": "usgs_gage_id",
           "usgs_lake_id_field": "usgs_lake_id"
         }
@@ -283,6 +305,17 @@
         "id_field": "nws shef id"
       },
       "description": "Table of active NWS gages used to filter NWM reservoir index."
+    },
+    "run_of_river": {
+      "$ref": "#/$defs/RunOfRiverDAInput",
+      "default": {
+        "path": "input/run_of_river_dams.gpkg",
+        "layer": "run_of_river_dams_points",
+        "run": false,
+        "lake_id_field": "lake_id",
+        "id_field": "nwps_id"
+      },
+      "description": "Crosswalk of large RFC run of river reservoirs to lake_id."
     },
     "usace": {
       "$ref": "#/$defs/USACEResDAInput",

@@ -28,6 +28,7 @@ from hydrofabric_builds.streamflow_gauges.usgs_gages_builder import (
     merge_minimal_gages,
     merge_nid_gages,
     merge_rfc_gages,
+    merge_run_of_river,
     merge_usace,
     merge_usbr,
     merge_usgs_shapefile_into_gages,
@@ -216,13 +217,16 @@ def gage_pipeline(cfg: HFConfig) -> gpd.GeoDataFrame:
         # 6) Add RFC gages from RFC, USACE, Adhoc, Canadian Great Lakes, USBR
         # ---------------------------------------------------------------------
         rfc_gages_path = _required_local_path(local_root, gage_cfg.gages.inputs.rfc.path, "rfc.path")
-        nwm_rfc_path = local_root / gage_cfg.gages.inputs.nwm_rfc.path
+        nwm_rfc_path = _required_local_path(local_root, gage_cfg.gages.inputs.nwm_rfc.path, "nwm_rfc.path")
         adhoc_path = _required_local_path(
             local_root, gage_cfg.gages.inputs.adhoc_lakes.path, "adhoc_lakes.path"
         )
         nid_path = _required_local_path(local_root, gage_cfg.gages.inputs.nid.path, "nid.path")
         usbr_path = _required_local_path(local_root, gage_cfg.gages.inputs.usbr.path, "usbr.path")
         usace_path = _required_local_path(local_root, gage_cfg.gages.inputs.usace.path, "usace.path")
+        run_of_rivers_path = _required_local_path(
+            local_root, gage_cfg.gages.inputs.run_of_river.path, "run_of_river.path"
+        )
 
         if rfc_gages_path.exists():
             gages = merge_rfc_gages(
@@ -253,7 +257,7 @@ def gage_pipeline(cfg: HFConfig) -> gpd.GeoDataFrame:
         else:
             logger.info(f"gages: 'nid' file not found, skipping: {nid_path}")
 
-        if adhoc_path.exists():
+        if adhoc_path.exists():  # ohio RFC
             gages = merge_adhoc_lakes_gages(
                 gages,
                 adhoc_path=adhoc_path,
@@ -282,8 +286,23 @@ def gage_pipeline(cfg: HFConfig) -> gpd.GeoDataFrame:
         else:
             logger.info(f"gages: 'usace' file list not found, skipping: {usace_path}")
 
+        if rfc_gages_path.exists() and run_of_rivers_path.exists():
+            gages = merge_run_of_river(
+                gages,
+                run_of_rivers_path=run_of_rivers_path,
+                layer=gage_cfg.gages.inputs.run_of_river.layer,
+                rfc_path=rfc_gages_path,
+                rfc_id_col=gage_cfg.gages.inputs.rfc.id_col_name,
+                run_of_rivers_id=gage_cfg.gages.inputs.run_of_river.id_col_name,
+                x_col=gage_cfg.gages.inputs.rfc.x_col_name,
+                y_col=gage_cfg.gages.inputs.rfc.y_col_name,
+                rfc_crs=gage_cfg.gages.inputs.rfc.gage_source_crs,
+            )
+        else:
+            logger.info(f"gages: 'run_of_river' and rfc file list not found, skipping: {usace_path}")
+
         # ---------------------------------------------------------------------
-        # 6) Append RouteLink gages not already in set
+        # 7) Append RouteLink gages not already in set
         # ---------------------------------------------------------------------
         gages = append_from_routelink(
             gdf=gages,
@@ -295,7 +314,7 @@ def gage_pipeline(cfg: HFConfig) -> gpd.GeoDataFrame:
         )
 
         # ---------------------------------------------------------------------
-        # 7) Finding upstream area for USGS gages using API
+        # 8) Finding upstream area for USGS gages using API
         # ---------------------------------------------------------------------
         run_NLDI_upstream_basins = gage_cfg.NLDI_upstream_basins.run_NLDI_upstream_basins
         nldi_file_path = local_root / gage_cfg.NLDI_upstream_basins.path
@@ -315,7 +334,7 @@ def gage_pipeline(cfg: HFConfig) -> gpd.GeoDataFrame:
             )
 
         # ---------------------------------------------------------------------
-        # 8) Assign NLDI basins column to gages
+        # 9) Assign NLDI basins column to gages
         # ---------------------------------------------------------------------
         if nldi_file_path.exists():
             gages = attach_nldi_cache(gages, nldi_file_path, layer_polys=layer_polys)
@@ -323,7 +342,7 @@ def gage_pipeline(cfg: HFConfig) -> gpd.GeoDataFrame:
             gages["basin_area_km2"] = "none"
 
         # ---------------------------------------------------------------------
-        # 9) Add upstream basin area from CIROH-UA csv file to gages
+        # 10) Add upstream basin area from CIROH-UA csv file to gages
         # ---------------------------------------------------------------------
         cfg_CIROH_UA = gage_cfg.gages.inputs.CIROH_UA
         gages = fill_usgs_basin_from_csv(
@@ -334,7 +353,7 @@ def gage_pipeline(cfg: HFConfig) -> gpd.GeoDataFrame:
         )
 
     # ---------------------------------------------------------------------
-    # 10) Assign flowpath to gages
+    # 11) Assign flowpath to gages
     # ---------------------------------------------------------------------
     buffer_gage = gage_cfg.assign_fp_to_gages.buffer_m
     parallel = gage_cfg.assign_fp_to_gages.parallel
@@ -351,7 +370,7 @@ def gage_pipeline(cfg: HFConfig) -> gpd.GeoDataFrame:
         tol=gage_cfg.assign_fp_to_gages.rel_err,
     )
     # ---------------------------------------------------------------------
-    # 11) drop the columns we don't need
+    # 12) drop the columns we don't need
     # ---------------------------------------------------------------------
     keep_cols = ["site_no", "geometry", "status", "USGS_basin_km2", "ref_fp_id", "method_fp_to_gage"]
     gages = gages[keep_cols]
@@ -360,7 +379,7 @@ def gage_pipeline(cfg: HFConfig) -> gpd.GeoDataFrame:
     gages["ref_fp_id"] = pd.to_numeric(gages["ref_fp_id"])
 
     # ---------------------------------------------------------------------
-    # 12) Crosswalk ref_fp_id to fp_id
+    # 13) Crosswalk ref_fp_id to fp_id
     # ---------------------------------------------------------------------
     gages = _crosswalk_reference(cfg.output_file_path, gages)
 
@@ -381,7 +400,7 @@ def gage_pipeline(cfg: HFConfig) -> gpd.GeoDataFrame:
     gages = _crosswalk_nexus(cfg.output_file_path, gages)
 
     # ---------------------------------------------------------------------
-    # 13) Write final output and return
+    # 14) Write final output and return
     # ---------------------------------------------------------------------
     logger.info(f"total gages: {len(gages)}")
     output = cfg.output_dir / gage_cfg.gages.target.out_gpkg

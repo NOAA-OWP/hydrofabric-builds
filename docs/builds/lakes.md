@@ -1,12 +1,11 @@
 # Lakes
 
-TODO: Update
-
 The NHF lakes layer integrates lakes and reservoir data from multiple sources. Hydraulic parameters for t-route are calculated.
+
+FOR COMPLETE INFORMATION ON FINAL LAKES DATA, SEE DOCUMENT: docs/reports/nhf_lakes.pdf
 
 ## Data sources
 ### Inputs
-s3: `s3://edfs-data/lakes/{domain}/inputs`
 local: `data/{domain}/lakes/input`
 
 #### Lake polygons:
@@ -25,13 +24,12 @@ Reference reservoirs is a point dataset of reservoirs generated from National In
 #### Reference Waterbodies
 Reference Waterbodies is a polygon dataset of different waterbodies in CONUS and includes NHD 2.2 COMID as ID. Reference waterbodies are joined to reference reservoirs with COMID to get mean lake elevation.
 
-#### Adhoc
+#### Adhoc RFC
 A list of adhoc lakes were created to ensure they are in NHF. Some lakes are only found in reference waterbodies. Some lake polygons are only found in reference waterbodies. These waterbodies are included in NHF.
 
 Future work could allow the Adhoc step to include a polygon to be used in the build process.
 
 ### Outputs:
-s3: `s3://edfs-data/lakes/{domain}/output`
 local: `data/lakes/{domain}/output`
 
 The output of the flowpath-associated and merged file is saved when flowpath_association is run. It can also be loaded a priori to skip running flowpath association as `{domain}_lakes_fp_associated.gpkg`. It can be used to skip flowpath association if stored under `nwm.tmp_path` and `nwm.associate_flowpaths` set to `False`,
@@ -42,7 +40,7 @@ The output of the full lakes process is saved. It can be used with the `use_cach
 ## Adding a new data source
 Data sources can be added to the lakes pipeline.
 1. Create a pydantic model in hydrofabric_builds.hydrofabric.schemas. Follow the templates like NWMLakeInput, RefWaterbodyInput, ReferenceReservoirs Input
-2. If new lakes are in reference waterbodies, add them to adhoc_lakes.gpkg and flag as true. These will be picked up by the Reference Waterbody step
+2. If new lakes are in reference waterbodies, add a flag in your dataset to signify lake is in reference waterbodies. These will be picked up by the Reference Waterbody step
 3. New polygon sources may need to be associated with flowpaths. The `polygon_outlet` flowpath association method requires the fields:
 - path
 - layer
@@ -62,3 +60,14 @@ Data sources can be added to the lakes pipeline.
 7. Add a function to handle elevation called `_calcuate_elevation__[name]`. Look at other elevation functions to determine how elevation should be calculated.
 You will need to fill out `ref_elev` and `dam_elev`. `ref_elev` is a normal pool proxy. It is the mean of the lake polygon. `dam_elev` is the elevation of the point outlet/dam.
 8. In hydrofabric_builds.lakes.lakes_pipeline, add a step before `concat all lakes`. The step should check if `run` is set to true. It should append the completed geodataframe to the geodataframe list. This list will pick up the geodataframe when lakes are concatenated.
+
+
+## Adding Low-head Dams
+To add new USACE low-head dams use the steps below. If you have a new data source for low-head dams that does not match the NID schema, follow the steps above to add a new lake input.
+1. Download USACE LHD
+2. Run `tools/builds/lakes/low_head_dam_crosswalk.py` to match dams to lake polygons where exist and create polygons where they do not. It will remap columns to NHF expected NID columns and convert from imperial to metric.
+3. Add file to `data/sconus/lakes/input/low_head_dams.gpkg`. It will be picked up in the current pipeline.
+
+
+## USACE API Query
+Follow the `tools/builds/gages/download_usace.py` to download data. The output includes `office` which is needed for querying the API.

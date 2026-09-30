@@ -1,7 +1,7 @@
 # global settings
 output_dir: data/
 crs: EPSG:32604
-output_name: hi_nhf_1.2.3.gpkg # If not specified, will default to version
+output_name: hi_nhf_1.3.2.gpkg # If not specified, will default to version
 
 # hf builds
 build:
@@ -273,7 +273,7 @@ gages:
    max_workers: null                  # None: if serial
    USGS_NLDI_crs: EPSG:4326      # usgs crs used in NLDI API. more info: https://waterdata.usgs.gov/blog/nldi-intro/
    work_crs: EPSG:32604           # an area-equal crs to calculate buffers and distances
-
+   override_fp_path: other/override_gage_flowpaths_hi.csv # override fp/vfp for gage with values in table
 # --------------------------------------------------
 # validate hydrofabric
 # --------------------------------------------------
@@ -331,6 +331,10 @@ lakes:
     attrib_src_key: "lake_id"
   adhoc:
     run: False
+  low_head_dams:
+    run: False # None in HI
+  run_of_river:
+    run: False # None in HI
   ref_res:
     run: False # No reference reservoirs in HI
   ref_wb:
@@ -349,6 +353,8 @@ res_da:
   all_level_pool: True
   generate_additional_crosswalk: False
   adhoc:
+    run: False
+  run_of_river:
     run: False
   usace:
     run: False

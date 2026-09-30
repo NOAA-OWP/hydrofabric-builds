@@ -35,7 +35,7 @@
     },
     "search_radius_m": {
       "default": 1000.0,
-      "description": "Distance from flowpath to search when associating flowpaths.",
+      "description": "Distance from flowpath to search when associating flowpaths for point association",
       "title": "Search Radius M",
       "type": "number"
     },

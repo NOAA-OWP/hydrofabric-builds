@@ -15,6 +15,7 @@ from hydrofabric_builds.lakes.da import (
     _merge,
     _read_adhoc,
     _read_res_index,
+    _read_run_of_river,
 )
 
 
@@ -27,9 +28,9 @@ def res_index_path() -> Path:
 def test_merge__mixed() -> None:
     """A mixed case of merging adhoc and reservoir index including:
     - non-duplicated rfc (4)
-    - non-duplicaed usgs (2)
+    - non-duplicated usgs (2)
     - non-duplicated usace (3)
-    - non-duplicaed adhoc rfc (4)
+    - non-duplicated adhoc rfc (4)
     - duplicated adhoc rfc / index usgs -> chooses adhoc
     - lake in adhoc that is not in nhf lakes -> dropped
     - lake not in res index or adhoc -> gets level pool (1)
@@ -44,6 +45,7 @@ def test_merge__mixed() -> None:
             Point(-1655121, 1406319),
             Point(624229, 2753739),
             Point(910763, 2443910),
+            Point(-1778525, 2997014),
         ],
         data={
             "nhf_lake_id": [
@@ -55,6 +57,7 @@ def test_merge__mixed() -> None:
                 1261703406200352,
                 1278784300184414,
                 1277324208337912,
+                1277324208337999,  # not real
             ],
             "lake_id": [
                 "120053476",
@@ -65,6 +68,7 @@ def test_merge__mixed() -> None:
                 "9997014",
                 "4800002",
                 "4800004",
+                "23062422",
             ],
         },
     )
@@ -95,6 +99,16 @@ def test_merge__mixed() -> None:
             },  # duplicated - rfc, should be kept
             {"lake_id": "4943477", "site_no": "fake-rfc", "da_type": 4},  # not in index, should be kept
             {"lake_id": "0", "site_no": "null", "da_type": 4},  # not in nhf lakes, should not be kept
+        ]
+    )
+
+    df_ror = pd.DataFrame.from_records(
+        [
+            {
+                "lake_id": "23062422",
+                "site_no": "WELW1",
+                "da_type": 4,
+            },  # 1 run of river
         ]
     )
 
@@ -148,10 +162,16 @@ def test_merge__mixed() -> None:
                 "site_no": "04159130",
                 "da_type": 6,
             },  # Lake MI/Huron
+            {
+                "nhf_lake_id": 1277324208337999,
+                "lake_id": "23062422",
+                "site_no": "WELW1",
+                "da_type": 4,
+            },  # 1 run of river
         ]
     )
 
-    output = _merge(gdf_lakes, df_list=[df_res_index, df_great_lakes, df_adhoc])
+    output = _merge(gdf_lakes, df_list=[df_res_index, df_great_lakes, df_adhoc, df_ror])
 
     assert_frame_equal(output, expected)
 
@@ -250,6 +270,55 @@ def test_merge__index_dupe() -> None:
     assert_frame_equal(output, expected)
 
 
+def test_merge__true_dupe() -> None:
+    """A single case where lake_id and res_id is duplicated and the first is kept"""
+    gdf_lakes = gpd.GeoDataFrame(
+        geometry=[
+            Point(-2035500, 2088294),
+        ],
+        data={
+            "nhf_lake_id": [
+                1254387044031094,
+            ],
+            "lake_id": ["120053476"],
+        },
+    )
+
+    df_res_index = pd.DataFrame.from_records(
+        [
+            {
+                "lake_id": "120053476",
+                "site_no": "usgs-fake",
+                "da_type": 2,
+            },  # duplicated
+        ]
+    )
+    df_adhoc = pd.DataFrame.from_records(
+        [
+            {
+                "lake_id": "120053476",
+                "site_no": "usgs-fake-2",
+                "da_type": 2,
+            },  # duplicated lake_id and da_type
+        ]
+    )
+
+    expected = pd.DataFrame.from_records(
+        [
+            {
+                "nhf_lake_id": 1254387044031094,
+                "lake_id": "120053476",
+                "site_no": "usgs-fake",
+                "da_type": 2,
+            },  # first USGS
+        ]
+    )
+
+    output = _merge(gdf_lakes, df_list=[df_res_index, df_adhoc])
+
+    assert_frame_equal(output, expected)
+
+
 def test_read_adhoc() -> None:
     """Read an adhoc with one row and one null row"""
     gdf = gpd.GeoDataFrame(
@@ -281,6 +350,23 @@ def test_read_res_index__usgs_fix_list(res_index_path: Path) -> None:
     assert {"site_no", "lake_id", "da_type"} == set(df.columns.values)
     assert set(df["da_type"].unique().tolist()) == {2, 3, 4}
     assert len(df.loc[df["site_no"].isin(["0137462010", "0208250410", "021556525"])]) == 3
+
+
+def test_read_run_of_river() -> None:
+    """read the run of river file"""
+    df = gpd.GeoDataFrame(
+        data={
+            "nwps_id": ["CNWM2", "RISW1"],
+            "usace_nid": ["MD00097", "WA00084"],
+            "lake_id": ["4726045", "ror-WA00084"],
+            "dam_name": ["Conowingo", "Rock Island"],
+        }
+    )
+    df = _read_run_of_river(df)
+    assert {"site_no", "lake_id", "da_type"} == set(df.columns.values)
+    assert set(df["da_type"].unique().tolist()) == {4}
+    assert df["site_no"].tolist() == ["CNWM2", "RISW1"]
+    assert df["lake_id"].tolist() == ["4726045", "ror-WA00084"]
 
 
 def test_all_level_pool() -> None:

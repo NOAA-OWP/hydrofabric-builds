@@ -1,18 +1,16 @@
 # Flowpath Attributes Build
 
-TODO: Update
-
 The flowpath attributes task calculates metrics per flowpath linestring from multiple sources: DEM, WRF defaults, and RiverML outputs.
 
 ## To run:
 
-1. Download source data from AWS test account:
-- DEM 250 m: s3://edfs-data/attributes/5070/usgs/usgs_250m_dem_5070.tif * TBD: Change to higher resolution
-- RiverML Y: s3://edfs-data/reference/super_conus/Y_bf_predictions.parquet
-- RiverML TW: s3://edfs-data/reference/super_conus/TW_bf_predictions.parquet
-- RiverML r: s3://edfs-data/reference/super_conus/r_predictions.parquet
+1. Unapck source data from AWS test account:
+- DEM 250 m: usgs_250m_dem_5070.tif * TBD: Change to higher resolution
+- RiverML Y: Y_bf_predictions.parquet
+- RiverML TW: TW_bf_predictions.parquet
+- RiverML r: r_predictions.parquet
 
-Save to this `data` folder in this repo. `aws cp [file] [location]` can be used
+Save to this `data\flowpath-attributes` folder in this repo.
 
 2. Update HF config as needed: see `example_config.yaml`
 - Set `run_flowpath_attribute_task: True`

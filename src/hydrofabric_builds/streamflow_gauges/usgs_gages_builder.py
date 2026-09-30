@@ -51,11 +51,7 @@ def strip_html(name_html: str | None) -> str | None:
 def infer_state_from_filename(path: Path) -> str:
     """Finds state''s name in abbreviation from the file's name"""
     stem = path.stem.lower()
-    state_part = (
-        stem.split("streamgages_", 1)[-1]
-        if "streamgages_" in stem
-        else stem.split("_")[-1]
-    )
+    state_part = stem.split("streamgages_", 1)[-1] if "streamgages_" in stem else stem.split("_")[-1]
     state_clean = state_part.replace("_", " ").replace("-", " ").strip()
     return " ".join(w.capitalize() for w in state_clean.split())
 
@@ -126,9 +122,7 @@ def build_usgs_gages_from_kmz(
                 "Name",
                 "Description",
             ]
-            gdf = gdf[keep].rename(
-                columns={"Name": "name_raw", "Description": "description"}
-            )
+            gdf = gdf[keep].rename(columns={"Name": "name_raw", "Description": "description"})
         except KeyError:
             keep = [
                 "geometry",
@@ -620,9 +614,7 @@ def merge_rfc_gages(
         Updated gages
     """
     df_rfc = pd.read_csv(rfc_path)
-    df_rfc.loc[
-        df_rfc[status_col] == "Forecasts are issued routinely year-round.", "priority"
-    ] = 1
+    df_rfc.loc[df_rfc[status_col] == "Forecasts are issued routinely year-round.", "priority"] = 1
 
     if nwm_rfc_path.exists():
         if ".nc" not in nwm_rfc_path.name:
@@ -632,12 +624,7 @@ def merge_rfc_gages(
 
         else:
             ds = xr.open_dataset(nwm_rfc_path)
-            df_nwm = (
-                ds[nwm_rfc_id]
-                .to_pandas()
-                .apply(lambda x: x.decode("utf-8"))
-                .str.strip()
-            )
+            df_nwm = ds[nwm_rfc_id].to_pandas().apply(lambda x: x.decode("utf-8")).str.strip()
             df_rfc.loc[df_rfc[rfc_id_col].isin(df_nwm.values), "priority"] = 1
 
     df_rfc = df_rfc.loc[df_rfc["priority"] == 1, [rfc_id_col, x_col, y_col]].copy()
@@ -649,9 +636,7 @@ def merge_rfc_gages(
     gdf_rfc = gdf_rfc.to_crs(gages.crs)
     gdf_rfc["status"] = "RFC"
     gages = pd.concat([gages, gdf_rfc])
-    logger.info(
-        f"Added {len(gdf_rfc)} RFC gages. Some may be dropped if outside domain."
-    )
+    logger.info(f"Added {len(gdf_rfc)} RFC gages. Some may be dropped if outside domain.")
     return gages
 
 
@@ -703,12 +688,7 @@ def merge_nid_gages(
             ds = xr.open_dataset(nwm_rfc_path)
 
         if nwm_usace_id in ds.variables:
-            df_nwm = (
-                ds[nwm_usace_id]
-                .to_pandas()
-                .apply(lambda x: x.decode("utf-8"))
-                .str.strip()
-            )
+            df_nwm = ds[nwm_usace_id].to_pandas().apply(lambda x: x.decode("utf-8")).str.strip()
             df_nid = df_nid.loc[df_nid[nid_id_col].isin(df_nwm.values)].copy()
 
             gdf_nid = gpd.GeoDataFrame(
@@ -723,14 +703,10 @@ def merge_nid_gages(
                 f"Added {len(gdf_nid)} USACE gages from reservoir index. Some may be dropped if outside domain."
             )
         else:
-            logger.info(
-                "No NID gages added because USACE crosswalk not available in NWM reservoir index."
-            )
+            logger.info("No NID gages added because USACE crosswalk not available in NWM reservoir index.")
             return gages
     else:
-        logger.info(
-            f"No NID gages added because NWM reservoir NetCDF file {nwm_rfc_path} is not available."
-        )
+        logger.info(f"No NID gages added because NWM reservoir NetCDF file {nwm_rfc_path} is not available.")
         return gages
     return gages
 
@@ -808,9 +784,7 @@ def merge_canadian_great_lakes(
             "site_no": [erie.site_no, ontario.site_no],
             "status": ["canada_great_lakes", "canada_great_lakes"],
         },
-        geometry=gpd.points_from_xy(
-            x=[erie.lon, ontario.lon], y=[erie.lat, ontario.lat]
-        ),
+        geometry=gpd.points_from_xy(x=[erie.lon, ontario.lon], y=[erie.lat, ontario.lat]),
         crs=4326,
     )
     gdf = gdf.to_crs(gages.crs)
@@ -819,9 +793,7 @@ def merge_canadian_great_lakes(
     return gages
 
 
-def merge_usbr(
-    gages: gpd.GeoDataFrame, usbr_path: Path, usbr_gage_id: str = "locId"
-) -> gpd.GeoDataFrame:
+def merge_usbr(gages: gpd.GeoDataFrame, usbr_path: Path, usbr_gage_id: str = "locId") -> gpd.GeoDataFrame:
     """Merge USBR gages from gpkg
 
     Parameters
@@ -840,18 +812,14 @@ def merge_usbr(
     """
     gdf = gpd.read_file(usbr_path)
     gdf = gdf.to_crs(gages.crs)
-    gdf = (
-        gdf[[usbr_gage_id, "geometry"]].copy().rename(columns={usbr_gage_id: "site_no"})
-    )
+    gdf = gdf[[usbr_gage_id, "geometry"]].copy().rename(columns={usbr_gage_id: "site_no"})
     gdf["status"] = "USBR"
 
     # ensure no collisions with usgs
     gdf["site_no"] = "usbr-" + gdf["site_no"].astype(pd.Int64Dtype()).astype(str)
 
     gages = pd.concat([gages, gdf])
-    logger.info(
-        f"Added {len(gdf)} gages from from USBR layer. Some may be dropped if outside domain."
-    )
+    logger.info(f"Added {len(gdf)} gages from from USBR layer. Some may be dropped if outside domain.")
     return gages
 
 
@@ -876,15 +844,80 @@ def merge_usace(
     """
     gdf = gpd.read_file(usace_path)
     gdf = gdf.to_crs(gages.crs)
-    gdf = (
-        gdf[[usace_gage_id, "geometry"]]
-        .copy()
-        .rename(columns={usace_gage_id: "site_no"})
-    )
+    gdf = gdf[[usace_gage_id, "geometry"]].copy().rename(columns={usace_gage_id: "site_no"})
     gdf["status"] = "USACE"
 
     gages = pd.concat([gages, gdf])
+    logger.info(f"Added {len(gdf)} gages from from USACE layer. Some may be dropped if outside domain.")
+    return gages
+
+
+def merge_run_of_river(
+    gages: gpd.GeoDataFrame,
+    run_of_rivers_path: Path,
+    rfc_path: Path,
+    layer: str | None = None,
+    run_of_rivers_id: str = "nwps_id",
+    rfc_id_col: str = "nws shef id",
+    x_col: str | None = "longitude",
+    y_col: str | None = "latitude",
+    rfc_crs: str | int = "EPSG:4326",
+) -> gpd.GeoDataFrame:
+    """Adds large RFC "run of river" hydroelectric dams to gages using NWIPS ID.
+
+    If gage is already present, update the status to 'RFC_run_of_river'
+    If the gage is not present, it will be appended.
+    Gage must exist in RFC source table.
+    Geometry will be used from RFC table so x_col, y_col, and rfc_crs refer to RFC,
+    not run of rivers.
+
+    Parameters
+    ----------
+    gages : gpd.GeoDataFrame
+        Master table
+    run_of_rivers_path : Path
+        Path to run of rivers geodataframe
+    rfc_path : Path
+        Path to RFC table with all RFC stations
+    run_of_rivers_id : str, optional
+        Run of rivers RFC ID by default "nwpips_id"
+    rfc_id_col : str, optional
+        RFC table RFC ID, by default "nws shef id"
+    x_col : str | None, optional
+        X column in RFC table, by default "longitude"
+    y_col : str | None, optional
+        Y colum in RFC table, by default "latitude"
+    rfc_crs : _type_, optional
+        RFC RS, by default "EPSG:4326"
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        Updated gages
+    """
+    gdf = gpd.read_file(run_of_rivers_path, layer=layer) if layer else gpd.read_file(run_of_rivers_path)
+    df_rfc = pd.read_csv(rfc_path)
+
+    # merge RFC locations to RoR
+    gdf = gdf.merge(df_rfc[[rfc_id_col, x_col, y_col]], left_on=run_of_rivers_id, right_on=rfc_id_col)
+
+    # update status of RFC gages already present
+    gages.loc[gages["site_no"].isin(gdf[rfc_id_col]), "status"] = "RFC_run_of_river"
+    updates = len(gages.loc[gages["status"] == "RFC_run_of_river"])
+
+    # subset gages that were not included previously
+    gdf = gdf.loc[~gdf[rfc_id_col].isin(gages["site_no"]), :].copy()
+
+    # create point geometry from RFC table
+    gdf["geometry"] = gpd.points_from_xy(x=gdf[x_col], y=gdf[y_col], crs=rfc_crs)
+    gdf = gdf[[run_of_rivers_id, "geometry"]].copy().rename(columns={run_of_rivers_id: "site_no"})
+    gdf["status"] = "RFC_run_of_river"
+    gdf = gdf.to_crs(gages.crs)
+
+    gages = pd.concat([gages, gdf])
+
     logger.info(
-        f"Added {len(gdf)} gages from from USACE layer. Some may be dropped if outside domain."
+        f"Added {len(gdf)} gages from from run of rivers layer. Updated {updates} gages already present to RFC run of rivers. "
+        " Some may be dropped if outside domain."
     )
     return gages

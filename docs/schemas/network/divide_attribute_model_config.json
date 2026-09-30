@@ -20,7 +20,7 @@
       "description": "Pydantic model for divide attributes attribute configuration",
       "properties": {
         "data_dir": {
-          "default": "nhf-builds/data/divide_attributes",
+          "default": "/mnt/share/projects/hydro/code/nhf-builds2/nhf-builds/data/divide_attributes",
           "description": "Top level directory for data layers",
           "format": "path",
           "title": "Data Dir",
@@ -79,7 +79,7 @@
       "type": "integer"
     },
     "data_dir": {
-      "default": "nhf-builds/data/divide_attributes",
+      "default": "/mnt/share/projects/hydro/code/nhf-builds2/nhf-builds/data/divide_attributes",
       "description": "Directory of all input data",
       "format": "path",
       "title": "Data Dir",

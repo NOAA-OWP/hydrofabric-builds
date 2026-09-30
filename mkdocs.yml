@@ -48,13 +48,20 @@ plugins:
 nav:
   - Home:
     - index.md
+    - Quickstart: quickstart.md
   - Hydrofabric:
     - builds/index.md
+    - Build Process: builds/build_process.md
     - Divide Attributes: builds/divide_attributes.md
     - Flowpath Attributes: builds/flowpath_attributes.md
     - Lakes: builds/lakes.md
     - Reservoir Attributes: builds/reservoir_attrs.md
     - Gage Snapping: builds/snap_gages_to_flowpaths.md
-    - Gages: builds/POI_gages_builder.md
+    - Gages: builds/gages.md
+    - OCONUS: builds/oconus.md
   - Development:
-    - development/development.md
+    - development/index.md
+    - Development: development/development.md
+    - Architecture: development/architecture.md
+    - Configuration: development/configuration.md
+    - Tools: development/tools.md
