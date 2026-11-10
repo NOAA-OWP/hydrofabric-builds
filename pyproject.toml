@@ -74,7 +74,7 @@ dev = [
   "types-PyYaml",
   "types-requests==2.32.4.20250611",
 ]
-examples = ["ipykernel==6.29.5", "jupyterlab==4.4.3"]
+examples = ["ipykernel==6.29.5", "jupyterlab==4.5.11"]
 tests = ["pytest==8.4.1", "pytest-cov==6.1.1", "astropy==7.1.0", "pytest-mock==3.15.1"]
 
 [tool.uv]
