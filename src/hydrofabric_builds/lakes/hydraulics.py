@@ -173,13 +173,15 @@ def _populate_hydraulics(
         df.get("ref_elev"),
     )
     base = _num(df.get("dam_elev", pd.Series(index=df.index, dtype="float32"))).to_numpy()
+    contradicts_base = (~np.isnan(base)) & (~np.isnan(H)) & (wb <= base + invert_frac * H)
+    wb = np.where(contradicts_base, np.nan, wb)
 
     # ---- Area (km²): ref_area_sqkm >  surface_area ----
     LkArea = _coalesce_num(
         _num(df.get("LkArea")),
         _num(df.get("wb_areasqkm")),
         _num(df.get("ref_area_sqkm")),
-        _num(df.get("surface_area")) / 1e6,
+        _num(df.get("surface_area")) * 0.00404686,
     )
     LkArea = np.where(LkArea == 0, np.nan, LkArea)
 
@@ -191,10 +193,13 @@ def _populate_hydraulics(
         _num(df.get("max_storage")) * 1233.48184,
     )
     storage_m3 = storage_m3.astype("float32")
-    mean_depth = np.where(
-        (~np.isnan(storage_m3)) & (~np.isnan(LkArea)) & (LkArea > 0),
-        storage_m3 / LkArea,
-        np.nan,
+    # LkArea is km2. A non-positive area is the only input here that yields inf or a
+    # negative depth; NaN on either side already propagates on its own.
+    mean_depth = np.divide(
+        storage_m3,
+        LkArea * 1e6,
+        out=np.full(np.shape(storage_m3), np.nan, dtype="float64"),
+        where=LkArea > 0,
     )
 
     # ---- Weir length (m): spillway_width > dam_length > default ----

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 import zipfile
+from collections.abc import Generator
 from pathlib import Path
 
 import geopandas as gpd
@@ -20,6 +21,7 @@ from hydrofabric_builds.streamflow_gauges.usgs_gages_builder import (
     merge_minimal_gages,
     merge_nid_gages,
     merge_rfc_gages,
+    merge_run_of_river,
     merge_usace,
     merge_usbr,
     merge_usgs_shapefile_into_gages,
@@ -55,7 +57,7 @@ def base_gages() -> gpd.GeoDataFrame:
 
 
 @pytest.fixture
-def base_kmz():
+def base_kmz() -> Generator:
     """Minimal KMZFile with two gages."""
     with tempfile.TemporaryDirectory() as tmpdir:
         kmz_path = Path(tmpdir) / "streamgages_test.kmz"
@@ -147,6 +149,12 @@ def kmz_file() -> Path:
 def kmz_blank_file() -> Path:
     """Path to a sample KMZ file with no gages."""
     return here() / "tests/data/gages/Blank_test.kmz"
+
+
+@pytest.fixture
+def run_of_river_gages() -> Path:
+    """Path to a run_of_river."""
+    return here() / "tests/data/gages/run_of_river_dams_test.gpkg"
 
 
 # ===================================================================
@@ -333,7 +341,7 @@ class TestMergeNIdGages:
 
 
 class TestMergeAdhocLakes:
-    def test_append_adhoc_lakes(self, gages: gpd.GeoDataFrame, adhoc_path: Path):
+    def test_append_adhoc_lakes(self, gages: gpd.GeoDataFrame, adhoc_path: Path) -> None:
         result = merge_adhoc_lakes_gages(gages, adhoc_path)
         adhoc_gages_total = len(gpd.read_file(adhoc_path))
         gages_total = len(gages)
@@ -368,3 +376,21 @@ class TestMergeUsace:
         usace_length = len(gpd.read_file(usace_gages))
         assert "USACE" in result["status"].values
         assert len(result) == total_gages + usace_length
+
+
+class TestRunOfRiver:
+    def test_appends_run_of_river(
+        self, tmp_path: Path, gages: gpd.GeoDataFrame, run_of_river_gages: Path
+    ) -> None:
+        rfc_csv = tmp_path / "rfc.csv"
+        rfc_csv.write_text(
+            "nws shef id,longitude,latitude,forecast status\n"
+            "WELW1, 47.95,-119.86666666667,Forecasts are issued routinely year-round.\n"
+            "CNWM2,39.657777777778,-76.174444444444,Forecasts are issued as needed during times of high water but are not routinely available.\n"
+            "RISW1,47.3325,-120.08,Forecasts are issued as needed during times of high water but are not routinely available.\n"
+        )
+        result = merge_run_of_river(gages, run_of_river_gages, rfc_path=rfc_csv)
+        total_gages = len(gages)
+        run_of_river_gages_length = len(gpd.read_file(run_of_river_gages))
+        assert "RFC_run_of_river" in result["status"].values
+        assert len(result) == total_gages + run_of_river_gages_length

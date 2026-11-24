@@ -1,11 +1,8 @@
 ## POI/Gages Builder — Integration Guide
-TODO: Update
+This document explains how to assemble a single, canonical gages layer by merging USGS (active + discontinued) and partner gage sources (TXDOT, CADWR, ENVCA, NWM calibration sets, AK/HI/PR supplements). You’ll unpack source data from archive and place them in your local user directory.
 
-This document explains how to assemble a single, canonical gages layer by merging USGS (active + discontinued) and partner gage sources (TXDOT, CADWR, ENVCA, NWM calibration sets, AK/HI/PR supplements). You’ll download the source files from the S3 bucket (see below), place them in your local user directory.
 ### Download source files:
-Download the entire set of source files from the project’s S3 bucket (Data account) can be found here:
-
-s3://hydrofabric-data/POI_gage_sources/gages/
+Unpack gages from gages to NHF archive.
 
 Before running, download source files from the S3 bucket into your local user directory,
 e.g. /home/<you>/Documents/hydrofabric-builds/data/gages/, preserving the expected subfolder structure:
@@ -15,10 +12,13 @@ e.g. /home/<you>/Documents/hydrofabric-builds/data/gages/, preserving the expect
          ├─ usgs_gages_discontinued/      # USGS KMZ bundles
          ├─ usgs_active_gages/            # USGS active shapefiles
          ├─ TXDOT_gages/TXDOT_gages.txt
-         ├─ gage_xy.csv                   # CADWR/ENVCA/AK/HI/PR etc.
          └─ all_gages_gpkgs/nwm_calib_gages.txt
          ├─ nldi_upstream_basins.gpkg     # USGS API, optional
          ├─ CIROH_UA/gage_area.csv        # CIROH csv file for upstream area
+         ├─ other/                        # CADWR/ENVCA/AK/HI/PR/Oerride/USACE/USBR/Run-of-river
+         ├─ routelink/                    # routelink files
+         ├─ rfc/                        # adhoc RFC, NWPS, reservoir index
+
 `
 
 ## What you’ll get (final dataset)
@@ -28,8 +28,12 @@ e.g. /home/<you>/Documents/hydrofabric-builds/data/gages/, preserving the expect
 * CADWR gages: ~25
 * ENVCA gages: ~27
 * NWM calibration gages list: ~1640
+* Routelink gages
+* US Bureau of Reclamation
+* US Army Corp of Engineers
+* RFC
 * Alaska, Puerto Rico, Hawaii: ~30
-* Total: 26,754 point features
+* Total: 29,555 point features
 
 ## How it works (high-level):
 
@@ -65,6 +69,8 @@ The gages task in hydrofabric-builds coordinates these steps:
 
 * Appends new sites and (optionally) updates geometry for existing ones.
 
+* Other gage sources added here with _merge function
+
 * You can exclude IDs (e.g., two Alaska gages outside the domain) if desired.
 
 ### 5- NWM Calibration gages
@@ -75,24 +81,24 @@ The gages task in hydrofabric-builds coordinates these steps:
 
 * Non-USGS IDs (e.g., Canadian IDs with letters) are reported and skipped.
 
-### 6) Finding upstream area for USGS gages using API (NLDI)
+### 6- Finding upstream area for USGS gages using API (NLDI)
 
 * The upstream area are read from USGS API and are compared with total upstream area calculated in hydrofabric (NHF). It is a method to make sure the flowpaths are assigned cor recently to gages.
 
 * The USGS Network Linked Data Index (NLDI) API is available in this [link](https://api.water.usgs.gov/nldi/swagger-ui/index.html?configUrl=/api/nldi/v3/api-docs/swagger-config#/linked-data-controller/getDataSources).
 
-### 7) Add upstream basin area from CIROH-UA csv file to gages
+### 7- Add upstream basin area from CIROH-UA csv file to gages
 
 * the upstream areas are read for CIROH csv file and added to gages wherever USGS API does not provide upstream area values. It adds ~ 10000 upstream area values to the list.
 * The file is accessible from the following [link](https://github.com/CIROH-UA/community_hf_patcher/blob/main/scripts/hydro/gages/gage_area.csv).
 
-### 8) Assign flowpath to gages
+### 8- Assign flowpath to gages
 
-* For each USGS gage, we assigned a corresponding flowpath in the NHF product using a hierarchical procedure based on upstream drainage area and spatial proximity. First, we queried the USGS NLDI API to obtain the reported upstream drainage area for all gages with available information and compared these values to the upstream area of candidate NHF flowpaths, assigning the gage to the flowpath whose upstream area most closely matched the USGS value. For gages where NLDI drainage area was unavailable, we instead used upstream area estimates from the CIROH community_hf_patcher dataset and repeated the same area-matching procedure. If neither the USGS NLDI nor CIROH-based upstream areas produced a sufficiently close match to the NHF upstream area, we then applied a purely spatial method, assigning the gage to the nearest NHF flowpath within a 1,000 m search radius.
+* For each USGS gage, we assigned a corresponding flowpath in the NHF product using a hierarchical procedure based on upstream drainage area and spatial proximity. First, we queried the USGS NLDI API to obtain the reported upstream drainage area for all gages with available information and compared these values to the upstream area of candidate NHF flowpaths, assigning the gage to the flowpath whose upstream area most closely matched the USGS value. For gages where NLDI drainage area was unavailable, we instead used upstream area estimates from the CIROH community_hf_patcher dataset and repeated the same area-matching procedure. If neither the USGS NLDI nor CIROH-based upstream areas produced a sufficiently close match to the NHF upstream area, we then applied a purely spatial method, assigning the gage to the nearest NHF flowpath within a configurable search radius.
 
-### 9) drop the columns we don't need
+### 9- drop the columns we don't need
 `keep_cols = ["site_no", "geometry", "status", "USGS_basin_km2", "fp_id", "method_fp_to_gage"]
 `
-### 10) Write final output
+### 10- Write final output
 
-* Exports a single GeoPackage with the unified usgs_gages layer.
+* Exports a single GeoPackage with the unified usgs_gages layer to NHF

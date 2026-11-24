@@ -23,7 +23,7 @@ def hydrolocations_pipeline(hf_path: Path) -> None:
     """
     # Initialize an empty gdf for each layer to assert correct typing
     # Add new layer names here
-    gdf_dict = {"waterbodies": gpd.GeoDataFrame(), "gages": gpd.GeoDataFrame(), "lakes": gpd.GeoDataFrame()}
+    gdf_dict = {"gages": gpd.GeoDataFrame(), "lakes": gpd.GeoDataFrame()}
 
     # This patterns handles null layers and assigns an incremental hy_id
     # cycle through opening layers and checking if present
@@ -37,6 +37,9 @@ def hydrolocations_pipeline(hf_path: Path) -> None:
         try:
             gdf = gpd.read_file(hf_path, layer=k)
             hy_ids = gdf.index + end_hy
+            # drop hy_id if it is already there and replace with new values
+            if "hy_id" in gdf.columns:
+                gdf.drop(columns=["hy_id"], inplace=True)
             gdf.insert(2, "hy_id", hy_ids)
             end_hy = gdf["hy_id"].iloc[-1] + 1
             gdf_dict[k] = gdf.copy()

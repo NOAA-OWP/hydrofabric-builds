@@ -1,2 +1,2 @@
 # Builds
-Find documentation for each build type here.
+Find documentation for build steps here.

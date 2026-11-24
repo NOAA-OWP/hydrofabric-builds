@@ -27,6 +27,18 @@
       "default": null,
       "title": "Path"
     },
+    "layer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Layer"
+    },
     "gage_source_crs": {
       "default": "EPSG:4326",
       "title": "Gage Source Crs",

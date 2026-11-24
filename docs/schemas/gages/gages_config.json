@@ -87,6 +87,18 @@
           "default": null,
           "title": "Path"
         },
+        "layer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Layer"
+        },
         "gage_source_crs": {
           "default": "EPSG:4326",
           "title": "Gage Source Crs",
@@ -230,6 +242,9 @@
           "description": "Flag to pull Lake Erie and Lake Ontario Canadian gages from GreatLakesMapping class defined in Lakes",
           "title": "Canada Great Lakes",
           "type": "boolean"
+        },
+        "run_of_river": {
+          "$ref": "#/$defs/GageInput"
         },
         "usbr": {
           "$ref": "#/$defs/GageInput",

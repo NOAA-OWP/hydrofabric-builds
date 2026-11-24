@@ -25,22 +25,10 @@
       "title": "Usace Gage Id Field",
       "type": "string"
     },
-    "usace_lake_id_field": {
-      "default": "usace_lake_id",
-      "description": "USACE lake ID field in reservoir index file",
-      "title": "Usace Lake Id Field",
-      "type": "string"
-    },
     "rfc_gage_id_field": {
       "default": "rfc_gage_id",
       "description": "RFC gage ID in reservoir index",
       "title": "Rfc Gage Id Field",
-      "type": "string"
-    },
-    "rfc_lake_id_field": {
-      "default": "rfc_lake_id",
-      "description": "RFC lake ID in reservoir index",
-      "title": "Rfc Lake Id Field",
       "type": "string"
     }
   },

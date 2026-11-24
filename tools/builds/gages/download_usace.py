@@ -157,6 +157,7 @@ def crosswalk_usace_lakes(
     if pd.api.types.is_numeric_dtype(gages_joined["lake_id"].dtype):
         gages_joined["lake_id"] = gages_joined["lake_id"].astype(pd.Int64Dtype()).astype(str)
 
+    # FIXME: This part is not running because of string dtype removing nulls
     # join missing lakes to optional second lakes polygons layer
     if isinstance(lakes_2, gpd.GeoDataFrame):
         lakes_2 = lakes_2.to_crs(lakes_1.crs)

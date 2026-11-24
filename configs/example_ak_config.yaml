@@ -1,7 +1,7 @@
 # global settings
 output_dir: data/
 crs: EPSG:3338
-output_name: ak_nhf_1.2.3.gpkg # If not specified, will default to version
+output_name: ak_nhf_1.3.2.gpkg # If not specified, will default to version
 
 # hf builds
 build:
@@ -398,6 +398,10 @@ lakes:
     run: False
   ref_res:
     run: False # No reference reservoirs in AK
+  low_head_dams:
+    run: False # None in AK
+  run_of_river:
+    run: False # None in AK
   ref_wb:
     run: False # No reference waterbodies in AK
   nid:
@@ -420,6 +424,8 @@ res_da:
   active_rfc:
     path: input/nwps_all_gauges_report.csv
     id_field: nws shef id
+  run_of_river:
+    run: False
   usace:
     run: False
   usbr:

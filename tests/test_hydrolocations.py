@@ -75,17 +75,14 @@ def test_hydrolocations_pipeline(tmp_hf_for_hl: Path) -> None:
         hydrolocations_pipeline(tmp_hf)
 
         gdf_hl = gpd.read_file(tmp_hf, layer="hydrolocations")
-        assert gdf_hl["hy_id"].tolist() == [1, 2, 3, 4, 5, 6]
-        assert gdf_hl["dn_nex_id"].tolist() == [21606, 21599, 21596, 21590, 21593, 21606]
+        assert gdf_hl["hy_id"].tolist() == [1, 2, 3]
+        assert gdf_hl["dn_nex_id"].tolist() == [21590, 21593, 21606]
 
         gdf_gages = gpd.read_file(tmp_hf, layer="gages")
-        assert gdf_gages["hy_id"].tolist() == [4, 5]
-
-        gdf_wb = gpd.read_file(tmp_hf, layer="waterbodies")
-        assert gdf_wb["hy_id"].tolist() == [1, 2, 3]
+        assert gdf_gages["hy_id"].tolist() == [1, 2]
 
         gdf_lk = gpd.read_file(tmp_hf, layer="lakes")
-        assert gdf_lk["hy_id"].tolist() == [6]
+        assert gdf_lk["hy_id"].tolist() == [3]
     finally:
         tmp_hf.unlink(missing_ok=True)
 

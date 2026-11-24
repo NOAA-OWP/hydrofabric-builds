@@ -370,3 +370,84 @@ def test_extract_elev_at_points(tmp_path: str | Path) -> None:
     assert pytest.approx(vals[1], rel=1e-6) == 20.0
     assert pytest.approx(vals[2], rel=1e-6) == 30.0
     assert pytest.approx(vals[3], rel=1e-6) == 40.0
+
+
+def _base_row(**overrides) -> pd.DataFrame:
+    """A single dam with everything absent unless a test names it."""
+    row = {
+        "dam_id": ["ls-1"],
+        "nidid": ["NID1"],
+        "dam_type": ["Concrete"],
+        "spillway_type": [None],
+        "structural_height": [np.nan],
+        "dam_height": [np.nan],
+        "hydraulic_height": [np.nan],
+        "nid_height": [np.nan],
+        "dam_length": [85.0],
+        "ref_area_sqkm": [np.nan],
+        "wb_areasqkm": [np.nan],
+        "surface_area": [np.nan],
+        "ref_elev": [np.nan],
+        "osm_wb_elev": [np.nan],
+        "dam_elev": [np.nan],
+        "nid_storage": [np.nan],
+        "normal_storage": [np.nan],
+        "max_storage": [np.nan],
+    }
+    row.update({k: [v] for k, v in overrides.items()})
+    return pd.DataFrame(row)
+
+
+def test_wb_below_the_dam_base_is_discarded() -> None:
+    """A polygon zonal mean below base + invert_frac * H cannot be the normal pool.
+
+    Taking it as WeirE puts the crest under the orifice invert, and the ordering clamp
+    then flattens WeirE and LkMxE onto OrificeE, leaving the reservoir with no weir head
+    and no orifice range. t-route's validation accepts the equality, so the reservoir
+    routes with zero outflow below its crest.
+    """
+    df = _base_row(structural_height=22.0, dam_elev=1500.0, ref_elev=1501.0, ref_area_sqkm=0.5)
+    row = _populate_hydraulics(df).iloc[0]
+
+    # wb is dropped, so the height fractions supply all three.
+    assert pytest.approx(row["OrificeE"], rel=1e-6) == 1500.0 + 0.15 * 22.0
+    assert pytest.approx(row["WeirE"], rel=1e-6) == 1500.0 + 0.90 * 22.0
+    assert pytest.approx(row["LkMxE"], rel=1e-6) == 1500.0 + 1.00 * 22.0
+    assert row["OrificeE"] < row["WeirE"] < row["LkMxE"]
+
+
+def test_wb_above_the_dam_base_is_kept() -> None:
+    """The gate must not discard a waterbody elevation that is consistent with base."""
+    df = _base_row(structural_height=22.0, dam_elev=1500.0, ref_elev=1515.0, ref_area_sqkm=0.5)
+    row = _populate_hydraulics(df).iloc[0]
+    assert pytest.approx(row["WeirE"], rel=1e-6) == 1515.0
+
+
+def test_surface_area_is_acres() -> None:
+    """NID surfaceArea is acres. Read as m2, Wells is 0.0097 km2 against a true 39.25."""
+    df = _base_row(surface_area=9700.0, dam_elev=100.0, structural_height=10.0)
+    row = _populate_hydraulics(df).iloc[0]
+    assert pytest.approx(row["LkArea"], rel=1e-6) == 9700.0 * 0.00404686
+
+
+def test_mean_depth_is_meters() -> None:
+    """storage / area needs area in m2. LkArea is km2, so the divisor carries a 1e6;
+    without it the depth is 1e6 too large and reaches the elevations through the
+    base + mean_depth fallback."""
+    # No heights and no ref_elev, so mean_depth is the only branch left for WeirE.
+    df = _base_row(dam_elev=100.0, ref_area_sqkm=0.5, nid_storage=1000.0)
+    row = _populate_hydraulics(df).iloc[0]
+    expected_depth = 1000.0 * 1233.48184 / (0.5 * 1e6)
+    assert pytest.approx(row["WeirE"], rel=1e-6) == 100.0 + expected_depth
+    assert row["WeirE"] < 110.0
+
+
+def test_mean_depth_skips_a_negative_area() -> None:
+    """A negative area is the one input that still reaches the divide.
+
+    Zeros become NaN upstream and NaN propagates on its own, so the `where` earns its
+    place only here. Unguarded, the depth is negative and WeirE lands below the base.
+    """
+    df = _base_row(dam_elev=100.0, ref_area_sqkm=-0.5, nid_storage=1000.0)
+    row = _populate_hydraulics(df).iloc[0]
+    assert np.isnan(row["WeirE"]), f"expected no depth from a negative area, got {row['WeirE']}"

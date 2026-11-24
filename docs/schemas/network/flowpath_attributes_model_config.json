@@ -21,7 +21,7 @@
       "type": "boolean"
     },
     "dem_path": {
-      "default": "nhf-builds/data/usgs_250m_dem_5070.tif",
+      "default": "/mnt/share/projects/hydro/code/nhf-builds2/nhf-builds/data/usgs_250m_dem_5070.tif",
       "description": "Path to DEM",
       "format": "path",
       "title": "DEM Path",
