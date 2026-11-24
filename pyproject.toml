@@ -36,7 +36,7 @@ dependencies = [
   "python-dotenv==1.1.0",
   "geopandas==1.1.1",
   "boto3==1.40.45",
-  "pyarrow==20.0.0",
+  "pyarrow==23.0.1",
   "pyiceberg[s3fs,glue,sql-sqlite]==0.9.1",
   "pyprojroot==0.3.0",
   "tqdm==4.67.1",
